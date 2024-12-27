@@ -98,6 +98,42 @@ test("adds tools", async () => {
   });
 });
 
+test('calls a tool', async () => {
+  await runWithTestServer({
+    start: async () => {
+      const server = new FastMCP({
+        name: "Test",
+        version: "1.0.0",
+      });
+
+      server.addTool({
+        name: "add",
+        description: "Add two numbers",
+        parameters: z.object({
+          a: z.number(),
+          b: z.number(),
+        }),
+        execute: async (args) => {
+          return args.a + args.b;
+        },
+      });
+
+      return server;
+    },
+    run: async ({ client }) => {
+      expect(await client.callTool({
+        name: "add",
+        arguments: {
+          a: 1,
+          b: 2,
+        },
+      })).toEqual({
+        content: [{ type: "text", text: "3" }],
+      });
+    },
+  });
+});
+
 test("adds resources", async () => {
   await runWithTestServer({
     start: async () => {
