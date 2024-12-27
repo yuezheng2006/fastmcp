@@ -5,6 +5,7 @@ import { hideBin } from "yargs/helpers";
 import { $ } from "execa";
 
 await yargs(hideBin(process.argv))
+  .scriptName("fastmcp")
   .command(
     "dev <file>",
     "Start a development server",
