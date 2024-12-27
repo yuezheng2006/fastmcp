@@ -11,7 +11,8 @@
     "fastmcp": "dist/bin/fastmcp.js"
   },
   "keywords": [
-    "MCP"
+    "MCP",
+    "SSE"
   ],
   "type": "module",
   "author": "Frank Fiegel <frank@glama.ai>",
