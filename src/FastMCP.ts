@@ -208,7 +208,15 @@ type ServerOptions = {
   version: `${number}.${number}.${number}`;
 };
 
-type LoggingLevel = "debug" | "info" | "notice" | "warning" | "error" | "critical" | "alert" | "emergency";
+type LoggingLevel =
+  | "debug"
+  | "info"
+  | "notice"
+  | "warning"
+  | "error"
+  | "critical"
+  | "alert"
+  | "emergency";
 
 export class FastMCP {
   #tools: Tool[];
