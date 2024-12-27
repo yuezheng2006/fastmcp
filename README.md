@@ -40,7 +40,7 @@ server.addTool({
     b: z.number(),
   }),
   execute: async (args) => {
-    return args.a + args.b;
+    return String(args.a + args.b);
   },
 });
 
@@ -106,6 +106,45 @@ server.addTool({
   }),
   execute: async (args) => {
     return await fetchWebpageContent(args.url);
+  },
+});
+```
+
+#### Returning a string
+
+`execute` can return a string:
+
+```js
+server.addTool({
+  name: "download",
+  description: "Download a file",
+  parameters: z.object({
+    url: z.string(),
+  }),
+  execute: async (args) => {
+    return "Hello, world!";
+  },
+});
+```
+
+The latter is equivalent to:
+
+```js
+server.addTool({
+  name: "download",
+  description: "Download a file",
+  parameters: z.object({
+    url: z.string(),
+  }),
+  execute: async (args) => {
+    return {
+      content: [
+        {
+          type: "text",
+          text: "Hello, world!",
+        },
+      ],
+    };
   },
 });
 ```

@@ -81,7 +81,7 @@ test("adds tools", async () => {
           b: z.number(),
         }),
         execute: async (args) => {
-          return args.a + args.b;
+          return String(args.a + args.b);
         },
       });
 
@@ -126,7 +126,7 @@ test("calls a tool", async () => {
           b: z.number(),
         }),
         execute: async (args) => {
-          return args.a + args.b;
+          return String(args.a + args.b);
         },
       });
 
@@ -209,7 +209,7 @@ test("handles UserError errors", async () => {
           a: z.number(),
           b: z.number(),
         }),
-        execute: async (args) => {
+        execute: async () => {
           throw new UserError("Something went wrong");
         },
       });
@@ -285,7 +285,7 @@ test("tracks tool progress", async () => {
 
           await delay(100);
 
-          return args.a + args.b;
+          return String(args.a + args.b);
         },
       });
 
@@ -362,7 +362,7 @@ test("sends logging messages to the client", async () => {
           log.info("info message");
           log.warn("warn message");
 
-          return args.a + args.b;
+          return String(args.a + args.b);
         },
       });
 

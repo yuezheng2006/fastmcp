@@ -81,6 +81,8 @@ const TextContentZodSchema = z
   })
   .strict();
 
+type TextContent = z.infer<typeof TextContentZodSchema>;
+
 const ImageContentZodSchema = z
   .object({
     type: z.literal("image"),
@@ -94,6 +96,8 @@ const ImageContentZodSchema = z
     mimeType: z.string(),
   })
   .strict();
+
+type ImageContent = z.infer<typeof ImageContentZodSchema>;
 
 const ContentZodSchema = z.discriminatedUnion("type", [
   TextContentZodSchema,
@@ -116,7 +120,7 @@ type Tool<Params extends ToolParameters = ToolParameters> = {
   execute: (
     args: z.infer<Params>,
     context: Context,
-  ) => Promise<string | number | ContentResult>;
+  ) => Promise<string | ContentResult>;
 };
 
 type Resource = {
@@ -306,25 +310,17 @@ export class FastMCP {
             },
           };
 
-          const maybeTextResult = await tool.execute(args, {
+          const maybeStringResult = await tool.execute(args, {
             reportProgress,
             log,
           });
 
-          if (
-            typeof maybeTextResult === "string" ||
-            typeof maybeTextResult === "number"
-          ) {
-            result = {
-              content: [
-                {
-                  type: "text",
-                  text: String(maybeTextResult),
-                },
-              ],
-            };
+          if (typeof maybeStringResult === "string") {
+            result = ContentResultZodSchema.parse({
+              content: [{ type: "text", text: maybeStringResult }],
+            });
           } else {
-            result = ContentResultZodSchema.parse(maybeTextResult);
+            result = ContentResultZodSchema.parse(maybeStringResult);
           }
         } catch (error) {
           if (error instanceof UserError) {
