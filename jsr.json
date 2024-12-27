@@ -1,0 +1,5 @@
+{
+  "name": "@glama/fastmcp",
+  "version": "1.0.0",
+  "exports": "./src/FastMCP.ts"
+}

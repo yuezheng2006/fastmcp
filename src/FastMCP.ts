@@ -8,7 +8,6 @@ import {
   ListPromptsRequestSchema,
   ListResourcesRequestSchema,
   ListToolsRequestSchema,
-  LoggingLevel,
   McpError,
   ReadResourceRequestSchema,
   ServerCapabilities,
@@ -107,6 +106,11 @@ type Context = {
   };
 };
 
+type TextContent = {
+  type: "text";
+  text: string;
+};
+
 const TextContentZodSchema = z
   .object({
     type: z.literal("text"),
@@ -115,9 +119,13 @@ const TextContentZodSchema = z
      */
     text: z.string(),
   })
-  .strict();
+  .strict() satisfies z.ZodType<TextContent>;
 
-type TextContent = z.infer<typeof TextContentZodSchema>;
+type ImageContent = {
+  type: "image";
+  data: string;
+  mimeType: string;
+};
 
 const ImageContentZodSchema = z
   .object({
@@ -131,23 +139,26 @@ const ImageContentZodSchema = z
      */
     mimeType: z.string(),
   })
-  .strict();
+  .strict() satisfies z.ZodType<ImageContent>;
 
-type ImageContent = z.infer<typeof ImageContentZodSchema>;
+type Content = TextContent | ImageContent;
 
 const ContentZodSchema = z.discriminatedUnion("type", [
   TextContentZodSchema,
   ImageContentZodSchema,
-]);
+]) satisfies z.ZodType<Content>;
+
+type ContentResult = {
+  content: Content[];
+  isError?: boolean;
+};
 
 const ContentResultZodSchema = z
   .object({
     content: ContentZodSchema.array(),
     isError: z.boolean().optional(),
   })
-  .strict();
-
-type ContentResult = z.infer<typeof ContentResultZodSchema>;
+  .strict() satisfies z.ZodType<ContentResult>;
 
 type Tool<Params extends ToolParameters = ToolParameters> = {
   name: string;
@@ -197,6 +208,8 @@ type ServerOptions = {
   version: `${number}.${number}.${number}`;
 };
 
+type LoggingLevel = "debug" | "info" | "notice" | "warning" | "error" | "critical" | "alert" | "emergency";
+
 export class FastMCP {
   #tools: Tool[];
   #resources: Resource[];
@@ -238,13 +251,14 @@ export class FastMCP {
     server.onerror = (error) => {
       console.error("[MCP Error]", error);
     };
+
     process.on("SIGINT", async () => {
       await server.close();
       process.exit(0);
     });
   }
 
-  public get loggingLevel() {
+  public get loggingLevel(): LoggingLevel {
     return this.#loggingLevel;
   }
 

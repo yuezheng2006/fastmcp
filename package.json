@@ -37,6 +37,7 @@
     ]
   },
   "devDependencies": {
+    "@sebbo2002/semantic-release-jsr": "^2.0.2",
     "@tsconfig/node22": "^22.0.0",
     "@types/node": "^22.10.2",
     "@types/yargs": "^17.0.33",
