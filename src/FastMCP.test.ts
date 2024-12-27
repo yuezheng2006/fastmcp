@@ -138,6 +138,45 @@ test("calls a tool", async () => {
   });
 });
 
+test("handles tool errors", async () => {
+  await runWithTestServer({
+    start: async () => {
+      const server = new FastMCP({
+        name: "Test",
+        version: "1.0.0",
+      });
+
+      server.addTool({
+        name: "add",
+        description: "Add two numbers",
+        parameters: z.object({
+          a: z.number(),
+          b: z.number(),
+        }),
+        execute: async (args) => {
+          throw new Error("Something went wrong");
+        },
+      });
+
+      return server;
+    },
+    run: async ({ client }) => {
+      expect(
+        await client.callTool({
+          name: "add",
+          arguments: {
+            a: 1,
+            b: 2,
+          },
+        }),
+      ).toEqual({
+        content: [{ type: "text", text: "Error: Error: Something went wrong" }],
+        isError: true,
+      });
+    },
+  });
+});
+
 test("calling an unknown tool throws McpError with MethodNotFound code", async () => {
   await runWithTestServer({
     start: async () => {
