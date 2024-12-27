@@ -16,6 +16,29 @@ import { zodToJsonSchema } from "zod-to-json-schema";
 import type { z } from "zod";
 import http from "http";
 
+abstract class FastMCPError extends Error {
+  public constructor(message?: string) {
+    super(message);
+    this.name = new.target.name;
+  }
+}
+
+type Extra = unknown;
+
+type Extras = Record<string, Extra>;
+
+class UnexpectedStateError extends FastMCPError {
+  public extras?: Extras;
+
+  public constructor(message: string, extras?: Extras) {
+    super(message);
+    this.name = new.target.name;
+    this.extras = extras;
+  }
+}
+
+export class UserError extends UnexpectedStateError {}
+
 type ToolParameters = z.ZodTypeAny;
 
 type Progress = {
@@ -181,6 +204,13 @@ export class FastMCP {
             reportProgress,
           });
         } catch (error) {
+          if (error instanceof UserError) {
+            return {
+              content: [{ type: "text", text: error.message }],
+              isError: true,
+            };
+          }
+
           return {
             content: [{ type: "text", text: `Error: ${error}` }],
             isError: true,

@@ -1,4 +1,4 @@
-import { FastMCP } from "./FastMCP.js";
+import { FastMCP, UserError } from "./FastMCP.js";
 import { z } from "zod";
 import { test, expect, vi } from "vitest";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
@@ -138,7 +138,7 @@ test("calls a tool", async () => {
   });
 });
 
-test("handles tool errors", async () => {
+test("handles UserError errors", async () => {
   await runWithTestServer({
     start: async () => {
       const server = new FastMCP({
@@ -154,7 +154,7 @@ test("handles tool errors", async () => {
           b: z.number(),
         }),
         execute: async (args) => {
-          throw new Error("Something went wrong");
+          throw new UserError("Something went wrong");
         },
       });
 
@@ -170,7 +170,7 @@ test("handles tool errors", async () => {
           },
         }),
       ).toEqual({
-        content: [{ type: "text", text: "Error: Error: Something went wrong" }],
+        content: [{ type: "text", text: "Something went wrong" }],
         isError: true,
       });
     },

@@ -110,6 +110,29 @@ server.addTool({
 });
 ```
 
+#### Errors
+
+The errors that are meant to be shown to the user should be thrown as `UserError` instances:
+
+```js
+import { UserError } from "fastmcp";
+
+server.addTool({
+  name: "download",
+  description: "Download a file",
+  parameters: z.object({
+    url: z.string(),
+  }),
+  execute: async (args) => {
+    if (args.url.startsWith("https://example.com")) {
+      throw new UserError("This URL is not allowed");
+    }
+
+    return "done";
+  },
+});
+```
+
 #### Progress
 
 Tools can report progress by calling `reportProgress` in the context object:
