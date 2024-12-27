@@ -18,11 +18,26 @@ import http from "http";
 
 type ToolParameters = z.ZodTypeAny;
 
+type Progress = {
+  /**
+   * The progress thus far. This should increase every time progress is made, even if the total is unknown.
+   */
+  progress: number;
+  /**
+   * Total number of items to process (or total progress required), if known.
+   */
+  total?: number;
+};
+
+type Context = {
+  reportProgress: (progress: Progress) => Promise<void>;
+};
+
 type Tool<Params extends ToolParameters = ToolParameters> = {
   name: string;
   description?: string;
   parameters?: Params;
-  execute: (args: z.infer<Params>) => Promise<unknown>;
+  execute: (args: z.infer<Params>, context: Context) => Promise<unknown>;
 };
 
 type Resource = {
@@ -118,54 +133,71 @@ export class FastMCP {
       };
     });
 
-    server.setRequestHandler(CallToolRequestSchema, async (request) => {
-      const tool = this.#tools.find(
-        (tool) => tool.name === request.params.name,
-      );
-
-      if (!tool) {
-        throw new McpError(
-          ErrorCode.MethodNotFound,
-          `Unknown tool: ${request.params.name}`,
+    server.setRequestHandler(
+      CallToolRequestSchema,
+      async (request, ...extra) => {
+        const tool = this.#tools.find(
+          (tool) => tool.name === request.params.name,
         );
-      }
 
-      let args: any = undefined;
-
-      if (tool.parameters) {
-        const parsed = tool.parameters.safeParse(request.params.arguments);
-
-        if (!parsed.success) {
+        if (!tool) {
           throw new McpError(
-            ErrorCode.InvalidRequest,
-            `Invalid ${request.params.name} arguments`,
+            ErrorCode.MethodNotFound,
+            `Unknown tool: ${request.params.name}`,
           );
         }
 
-        args = parsed.data;
-      }
+        let args: any = undefined;
 
-      let result: any;
+        if (tool.parameters) {
+          const parsed = tool.parameters.safeParse(request.params.arguments);
 
-      try {
-        result = await tool.execute(args);
-      } catch (error) {
+          if (!parsed.success) {
+            throw new McpError(
+              ErrorCode.InvalidRequest,
+              `Invalid ${request.params.name} arguments`,
+            );
+          }
+
+          args = parsed.data;
+        }
+
+        const progressToken = request.params?._meta?.progressToken;
+
+        let result: any;
+
+        try {
+          const reportProgress = async (progress: Progress) => {
+            await server.notification({
+              method: "notifications/progress",
+              params: {
+                ...progress,
+                progressToken,
+              },
+            });
+          };
+
+          result = await tool.execute(args, {
+            reportProgress,
+          });
+        } catch (error) {
+          return {
+            content: [{ type: "text", text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+
+        if (typeof result === "string") {
+          return {
+            content: [{ type: "text", text: result }],
+          };
+        }
+
         return {
-          content: [{ type: "text", text: `Error: ${error}` }],
-          isError: true,
+          content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
         };
-      }
-
-      if (typeof result === "string") {
-        return {
-          content: [{ type: "text", text: result }],
-        };
-      }
-
-      return {
-        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-      };
-    });
+      },
+    );
   }
 
   private setupResourceHandlers(server: Server) {

@@ -12,6 +12,7 @@ A TypeScript framework for building [MCP](https://modelcontextprotocol.io/) serv
 - Built-in error handling
 - Built-in CLI for testing and debugging
 - Built-in support for SSE
+- Built-in progress notifications
 
 ## Installation
 
@@ -105,6 +106,35 @@ server.addTool({
   execute: async (args) => {
     const content = await fetchWebpageContent(args.url);
     return content;
+  },
+});
+```
+
+#### Progress
+
+Tools can report progress by calling `reportProgress` in the context object:
+
+```js
+server.addTool({
+  name: "download",
+  description: "Download a file",
+  parameters: z.object({
+    url: z.string(),
+  }),
+  execute: async (args, { reportProgress }) => {
+    reportProgress({
+      progress: 0,
+      total: 100,
+    });
+
+    // ...
+
+    reportProgress({
+      progress: 100,
+      total: 100,
+    });
+
+    return 'done';
   },
 });
 ```

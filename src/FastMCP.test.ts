@@ -1,10 +1,11 @@
 import { FastMCP } from "./FastMCP.js";
 import { z } from "zod";
-import { test, expect } from "vitest";
+import { test, expect, vi } from "vitest";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
 import { getRandomPort } from "get-port-please";
 import { EventSource } from "eventsource";
+import { setTimeout as delay } from "timers/promises";
 
 // @ts-expect-error - figure out how to use --experimental-eventsource with vitest
 global.EventSource = EventSource;
@@ -98,7 +99,7 @@ test("adds tools", async () => {
   });
 });
 
-test('calls a tool', async () => {
+test("calls a tool", async () => {
   await runWithTestServer({
     start: async () => {
       const server = new FastMCP({
@@ -121,14 +122,71 @@ test('calls a tool', async () => {
       return server;
     },
     run: async ({ client }) => {
-      expect(await client.callTool({
-        name: "add",
-        arguments: {
-          a: 1,
-          b: 2,
-        },
-      })).toEqual({
+      expect(
+        await client.callTool({
+          name: "add",
+          arguments: {
+            a: 1,
+            b: 2,
+          },
+        }),
+      ).toEqual({
         content: [{ type: "text", text: "3" }],
+      });
+    },
+  });
+});
+
+test("tracks tool progress", async () => {
+  await runWithTestServer({
+    start: async () => {
+      const server = new FastMCP({
+        name: "Test",
+        version: "1.0.0",
+      });
+
+      server.addTool({
+        name: "add",
+        description: "Add two numbers",
+        parameters: z.object({
+          a: z.number(),
+          b: z.number(),
+        }),
+        execute: async (args, { reportProgress }) => {
+          reportProgress({
+            progress: 0,
+            total: 10,
+          });
+
+          await delay(100);
+
+          return args.a + args.b;
+        },
+      });
+
+      return server;
+    },
+    run: async ({ client }) => {
+      const onProgress = vi.fn();
+
+      await client.callTool(
+        {
+          name: "add",
+          arguments: {
+            a: 1,
+            b: 2,
+          },
+        },
+        undefined,
+        {
+          onprogress: onProgress,
+        },
+      );
+
+      expect(onProgress).toHaveBeenCalledTimes(1);
+      expect(onProgress).toHaveBeenCalledWith({
+        progress: 0,
+        total: 10,
       });
     },
   });
