@@ -1,4 +1,4 @@
-import { FastMCP, UserError } from "./FastMCP.js";
+import { FastMCP, UserError, imageContent } from "./FastMCP.js";
 import { z } from "zod";
 import { test, expect, vi } from "vitest";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
@@ -188,6 +188,55 @@ test("returns a list", async () => {
         content: [
           { type: "text", text: "a" },
           { type: "text", text: "b" },
+        ],
+      });
+    },
+  });
+});
+
+test("returns an image", async () => {
+  await runWithTestServer({
+    start: async () => {
+      const server = new FastMCP({
+        name: "Test",
+        version: "1.0.0",
+      });
+
+      server.addTool({
+        name: "add",
+        description: "Add two numbers",
+        parameters: z.object({
+          a: z.number(),
+          b: z.number(),
+        }),
+        execute: async () => {
+          return imageContent({
+            buffer: Buffer.from(
+              "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+              "base64",
+            ),
+          });
+        },
+      });
+
+      return server;
+    },
+    run: async ({ client }) => {
+      expect(
+        await client.callTool({
+          name: "add",
+          arguments: {
+            a: 1,
+            b: 2,
+          },
+        }),
+      ).toEqual({
+        content: [
+          {
+            type: "image",
+            data: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+            mimeType: "image/png",
+          },
         ],
       });
     },

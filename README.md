@@ -171,6 +171,75 @@ server.addTool({
 });
 ```
 
+#### Returning an image
+
+Use the `imageContent` to create a content object for an image:
+
+```js
+import { imageContent } from "fastmcp";
+
+server.addTool({
+  name: "download",
+  description: "Download a file",
+  parameters: z.object({
+    url: z.string(),
+  }),
+  execute: async (args) => {
+    return imageContent({
+      url: "https://example.com/image.png",
+    });
+
+    // or...
+    // return imageContent({
+    //   path: "/path/to/image.png",
+    // });
+
+    // or...
+    // return imageContent({
+    //   buffer: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=", "base64"),
+    // });
+
+    // or...
+    // return {
+    //   content: [
+    //     imageContent()
+    //   ],
+    // };
+  },
+});
+```
+
+The `imageContent` function takes the following options:
+
+- `url`: The URL of the image.
+- `path`: The path to the image file.
+- `buffer`: The image data as a buffer.
+
+Only one of `url`, `path`, or `buffer` must be specified.
+
+The above example is equivalent to:
+
+```js
+server.addTool({
+  name: "download",
+  description: "Download a file",
+  parameters: z.object({
+    url: z.string(),
+  }),
+  execute: async (args) => {
+    return {
+      content: [
+        {
+          type: "image",
+          data: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+          mimeType: "image/png",
+        },
+      ],
+    };
+  },
+});
+```
+
 #### Logging
 
 Tools can log messages to the client using the `log` object in the context object:

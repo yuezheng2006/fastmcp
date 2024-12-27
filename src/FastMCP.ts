@@ -17,6 +17,42 @@ import {
 import { zodToJsonSchema } from "zod-to-json-schema";
 import { z } from "zod";
 import http from "http";
+import { readFile } from "fs/promises";
+import { fileTypeFromBuffer } from "file-type";
+
+export const imageContent = async (
+  input: { url: string } | { path: string } | { buffer: Buffer },
+): Promise<ImageContent> => {
+  let rawData: Buffer;
+
+  if ("url" in input) {
+    const response = await fetch(input.url);
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch image from URL: ${response.statusText}`);
+    }
+
+    rawData = Buffer.from(await response.arrayBuffer());
+  } else if ("path" in input) {
+    rawData = await readFile(input.path);
+  } else if ("buffer" in input) {
+    rawData = input.buffer;
+  } else {
+    throw new Error(
+      "Invalid input: Provide a valid 'url', 'path', or 'buffer'",
+    );
+  }
+
+  const mimeType = await fileTypeFromBuffer(rawData);
+
+  const base64Data = rawData.toString("base64");
+
+  return {
+    type: "image",
+    data: base64Data,
+    mimeType: mimeType?.mime ?? "image/png",
+  } as const;
+};
 
 abstract class FastMCPError extends Error {
   public constructor(message?: string) {
@@ -81,6 +117,8 @@ const TextContentZodSchema = z
   })
   .strict();
 
+type TextContent = z.infer<typeof TextContentZodSchema>;
+
 const ImageContentZodSchema = z
   .object({
     type: z.literal("image"),
@@ -94,6 +132,8 @@ const ImageContentZodSchema = z
     mimeType: z.string(),
   })
   .strict();
+
+type ImageContent = z.infer<typeof ImageContentZodSchema>;
 
 const ContentZodSchema = z.discriminatedUnion("type", [
   TextContentZodSchema,
@@ -116,7 +156,7 @@ type Tool<Params extends ToolParameters = ToolParameters> = {
   execute: (
     args: z.infer<Params>,
     context: Context,
-  ) => Promise<string | ContentResult>;
+  ) => Promise<string | ContentResult | TextContent | ImageContent>;
 };
 
 type Resource = {
@@ -223,118 +263,119 @@ export class FastMCP {
       };
     });
 
-    server.setRequestHandler(
-      CallToolRequestSchema,
-      async (request) => {
-        const tool = this.#tools.find(
-          (tool) => tool.name === request.params.name,
-        );
+    server.setRequestHandler(CallToolRequestSchema, async (request) => {
+      const tool = this.#tools.find(
+        (tool) => tool.name === request.params.name,
+      );
 
-        if (!tool) {
+      if (!tool) {
+        throw new McpError(
+          ErrorCode.MethodNotFound,
+          `Unknown tool: ${request.params.name}`,
+        );
+      }
+
+      let args: any = undefined;
+
+      if (tool.parameters) {
+        const parsed = tool.parameters.safeParse(request.params.arguments);
+
+        if (!parsed.success) {
           throw new McpError(
-            ErrorCode.MethodNotFound,
-            `Unknown tool: ${request.params.name}`,
+            ErrorCode.InvalidRequest,
+            `Invalid ${request.params.name} arguments`,
           );
         }
 
-        let args: any = undefined;
+        args = parsed.data;
+      }
 
-        if (tool.parameters) {
-          const parsed = tool.parameters.safeParse(request.params.arguments);
+      const progressToken = request.params?._meta?.progressToken;
 
-          if (!parsed.success) {
-            throw new McpError(
-              ErrorCode.InvalidRequest,
-              `Invalid ${request.params.name} arguments`,
-            );
-          }
+      let result: ContentResult;
 
-          args = parsed.data;
-        }
+      try {
+        const reportProgress = async (progress: Progress) => {
+          await server.notification({
+            method: "notifications/progress",
+            params: {
+              ...progress,
+              progressToken,
+            },
+          });
+        };
 
-        const progressToken = request.params?._meta?.progressToken;
-
-        let result: ContentResult;
-
-        try {
-          const reportProgress = async (progress: Progress) => {
-            await server.notification({
-              method: "notifications/progress",
-              params: {
-                ...progress,
-                progressToken,
+        const log = {
+          debug: (message: string, context?: SerializableValue) => {
+            server.sendLoggingMessage({
+              level: "debug",
+              data: {
+                message,
+                context,
               },
             });
-          };
-
-          const log = {
-            debug: (message: string, context?: SerializableValue) => {
-              server.sendLoggingMessage({
-                level: "debug",
-                data: {
-                  message,
-                  context,
-                },
-              });
-            },
-            error: (message: string, context?: SerializableValue) => {
-              server.sendLoggingMessage({
-                level: "error",
-                data: {
-                  message,
-                  context,
-                },
-              });
-            },
-            info: (message: string, context?: SerializableValue) => {
-              server.sendLoggingMessage({
-                level: "info",
-                data: {
-                  message,
-                  context,
-                },
-              });
-            },
-            warn: (message: string, context?: SerializableValue) => {
-              server.sendLoggingMessage({
-                level: "warning",
-                data: {
-                  message,
-                  context,
-                },
-              });
-            },
-          };
-
-          const maybeStringResult = await tool.execute(args, {
-            reportProgress,
-            log,
-          });
-
-          if (typeof maybeStringResult === "string") {
-            result = ContentResultZodSchema.parse({
-              content: [{ type: "text", text: maybeStringResult }],
+          },
+          error: (message: string, context?: SerializableValue) => {
+            server.sendLoggingMessage({
+              level: "error",
+              data: {
+                message,
+                context,
+              },
             });
-          } else {
-            result = ContentResultZodSchema.parse(maybeStringResult);
-          }
-        } catch (error) {
-          if (error instanceof UserError) {
-            return {
-              content: [{ type: "text", text: error.message }],
-              isError: true,
-            };
-          }
+          },
+          info: (message: string, context?: SerializableValue) => {
+            server.sendLoggingMessage({
+              level: "info",
+              data: {
+                message,
+                context,
+              },
+            });
+          },
+          warn: (message: string, context?: SerializableValue) => {
+            server.sendLoggingMessage({
+              level: "warning",
+              data: {
+                message,
+                context,
+              },
+            });
+          },
+        };
 
+        const maybeStringResult = await tool.execute(args, {
+          reportProgress,
+          log,
+        });
+
+        if (typeof maybeStringResult === "string") {
+          result = ContentResultZodSchema.parse({
+            content: [{ type: "text", text: maybeStringResult }],
+          });
+        } else if ("type" in maybeStringResult) {
+          result = ContentResultZodSchema.parse({
+            content: [maybeStringResult],
+          });
+        } else {
+          result = ContentResultZodSchema.parse(maybeStringResult);
+        }
+      } catch (error) {
+        if (error instanceof UserError) {
           return {
-            content: [{ type: "text", text: `Error: ${error}` }],
+            content: [{ type: "text", text: error.message }],
             isError: true,
           };
         }
 
-        return result;
-      },
-    );
+        return {
+          content: [{ type: "text", text: `Error: ${error}` }],
+          isError: true,
+        };
+      }
+
+      return result;
+    });
   }
 
   private setupResourceHandlers(server: Server) {
