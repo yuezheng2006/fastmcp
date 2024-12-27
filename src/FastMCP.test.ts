@@ -8,7 +8,6 @@ import { EventSource } from "eventsource";
 import { setTimeout as delay } from "timers/promises";
 import {
   ErrorCode,
-  JSONRPCMessage,
   LoggingMessageNotificationSchema,
   McpError,
 } from "@modelcontextprotocol/sdk/types.js";
@@ -293,29 +292,6 @@ test("sets logging levels", async () => {
     },
   });
 });
-
-const onMessage = (
-  client: Client,
-  callback: (message: JSONRPCMessage) => void,
-) => {
-  if (!client.transport) {
-    throw new Error("Transport not set");
-  }
-
-  const onmessage = client.transport.onmessage;
-
-  if (!onmessage) {
-    throw new Error("onmessage not set");
-  }
-
-  client.transport.onmessage = (message) => {
-    console.log("message", message);
-
-    onmessage(message);
-
-    callback(message);
-  };
-};
 
 test("sends logging messages to the client", async () => {
   await runWithTestServer({
