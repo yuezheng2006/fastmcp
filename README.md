@@ -105,8 +105,29 @@ server.addTool({
     url: z.string(),
   }),
   execute: async (args) => {
-    const content = await fetchWebpageContent(args.url);
-    return content;
+    return await fetchWebpageContent(args.url);
+  },
+});
+```
+
+#### Returning a list
+
+If you want to return a list of messages, you can return an object with a `content` property:
+
+```js
+server.addTool({
+  name: "download",
+  description: "Download a file",
+  parameters: z.object({
+    url: z.string(),
+  }),
+  execute: async (args) => {
+    return {
+      content: [
+        { type: "text", text: "First message" },
+        { type: "text", text: "Second message" },
+      ],
+    };
   },
 });
 ```

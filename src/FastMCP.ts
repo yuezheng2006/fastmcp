@@ -15,7 +15,7 @@ import {
   SetLevelRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { zodToJsonSchema } from "zod-to-json-schema";
-import type { z } from "zod";
+import { z } from "zod";
 import http from "http";
 
 abstract class FastMCPError extends Error {
@@ -71,11 +71,52 @@ type Context = {
   };
 };
 
+const TextContentZodSchema = z
+  .object({
+    type: z.literal("text"),
+    /**
+     * The text content of the message.
+     */
+    text: z.string(),
+  })
+  .strict();
+
+const ImageContentZodSchema = z
+  .object({
+    type: z.literal("image"),
+    /**
+     * The base64-encoded image data.
+     */
+    data: z.string().base64(),
+    /**
+     * The MIME type of the image. Different providers may support different image types.
+     */
+    mimeType: z.string(),
+  })
+  .strict();
+
+const ContentZodSchema = z.discriminatedUnion("type", [
+  TextContentZodSchema,
+  ImageContentZodSchema,
+]);
+
+const ContentResultZodSchema = z
+  .object({
+    content: ContentZodSchema.array(),
+    isError: z.boolean().optional(),
+  })
+  .strict();
+
+type ContentResult = z.infer<typeof ContentResultZodSchema>;
+
 type Tool<Params extends ToolParameters = ToolParameters> = {
   name: string;
   description?: string;
   parameters?: Params;
-  execute: (args: z.infer<Params>, context: Context) => Promise<unknown>;
+  execute: (
+    args: z.infer<Params>,
+    context: Context,
+  ) => Promise<string | number | ContentResult>;
 };
 
 type Resource = {
@@ -213,7 +254,7 @@ export class FastMCP {
 
         const progressToken = request.params?._meta?.progressToken;
 
-        let result: any;
+        let result: ContentResult;
 
         try {
           const reportProgress = async (progress: Progress) => {
@@ -265,10 +306,26 @@ export class FastMCP {
             },
           };
 
-          result = await tool.execute(args, {
+          const maybeTextResult = await tool.execute(args, {
             reportProgress,
             log,
           });
+
+          if (
+            typeof maybeTextResult === "string" ||
+            typeof maybeTextResult === "number"
+          ) {
+            result = {
+              content: [
+                {
+                  type: "text",
+                  text: String(maybeTextResult),
+                },
+              ],
+            };
+          } else {
+            result = ContentResultZodSchema.parse(maybeTextResult);
+          }
         } catch (error) {
           if (error instanceof UserError) {
             return {
@@ -283,15 +340,7 @@ export class FastMCP {
           };
         }
 
-        if (typeof result === "string") {
-          return {
-            content: [{ type: "text", text: result }],
-          };
-        }
-
-        return {
-          content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-        };
+        return result;
       },
     );
   }

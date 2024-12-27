@@ -148,6 +148,52 @@ test("calls a tool", async () => {
   });
 });
 
+test("returns a list", async () => {
+  await runWithTestServer({
+    start: async () => {
+      const server = new FastMCP({
+        name: "Test",
+        version: "1.0.0",
+      });
+
+      server.addTool({
+        name: "add",
+        description: "Add two numbers",
+        parameters: z.object({
+          a: z.number(),
+          b: z.number(),
+        }),
+        execute: async (args) => {
+          return {
+            content: [
+              { type: "text", text: "a" },
+              { type: "text", text: "b" },
+            ],
+          };
+        },
+      });
+
+      return server;
+    },
+    run: async ({ client }) => {
+      expect(
+        await client.callTool({
+          name: "add",
+          arguments: {
+            a: 1,
+            b: 2,
+          },
+        }),
+      ).toEqual({
+        content: [
+          { type: "text", text: "a" },
+          { type: "text", text: "b" },
+        ],
+      });
+    },
+  });
+});
+
 test("handles UserError errors", async () => {
   await runWithTestServer({
     start: async () => {
