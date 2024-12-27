@@ -1,0 +1,63 @@
+{
+  "name": "fastmcp",
+  "version": "1.0.0",
+  "main": "dist/fastmcp.js",
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "format": "prettier --write . && eslint --fix ."
+  },
+  "bin": {
+    "fastmcp": "dist/bin/fastmcp.js"
+  },
+  "keywords": [
+    "MCP"
+  ],
+  "type": "module",
+  "author": "Frank Fiegel <frank@glama.ai>",
+  "license": "MIT",
+  "description": "A TypeScript framework for building MCP servers.",
+  "module": "dist/fastmcp.js",
+  "types": "dist/fastmcp.d.ts",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "execa": "^9.5.2",
+    "yargs": "^17.7.2",
+    "zod": "^3.24.1",
+    "zod-to-json-schema": "^3.24.1"
+  },
+  "repository": {
+    "url": "https://github.com/punkpeye/fastmcp"
+  },
+  "release": {
+    "branches": [
+      "main"
+    ]
+  },
+  "devDependencies": {
+    "@tsconfig/node22": "^22.0.0",
+    "@types/node": "^22.10.2",
+    "@types/yargs": "^17.0.33",
+    "eslint": "^9.17.0",
+    "eslint-plugin-perfectionist": "^4.4.0",
+    "eventsource": "^3.0.2",
+    "get-port-please": "^3.1.2",
+    "prettier": "^3.4.2",
+    "semantic-release": "^24.2.0",
+    "tsup": "^8.3.5",
+    "vitest": "^2.1.8"
+  },
+  "tsup": {
+    "entry": [
+      "src/FastMCP.ts",
+      "src/bin/fastmcp.ts"
+    ],
+    "format": [
+      "esm"
+    ],
+    "dts": true,
+    "splitting": true,
+    "sourcemap": true,
+    "clean": true
+  }
+}
