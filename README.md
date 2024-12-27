@@ -203,7 +203,7 @@ server.addTool({
     // or...
     // return {
     //   content: [
-    //     imageContent()
+    //     await imageContent(...)
     //   ],
     // };
   },
