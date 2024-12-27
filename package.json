@@ -34,6 +34,13 @@
   "release": {
     "branches": [
       "main"
+    ],
+    "plugins": [
+      "@semantic-release/commit-analyzer",
+      "@semantic-release/release-notes-generator",
+      "@semantic-release/npm",
+      "@semantic-release/github",
+      "@sebbo2002/semantic-release-jsr"
     ]
   },
   "devDependencies": {
