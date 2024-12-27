@@ -10,9 +10,9 @@ A TypeScript framework for building [MCP](https://modelcontextprotocol.io/) serv
 - Simple Tool, Resource, Prompt definition
 - Full TypeScript support
 - Built-in error handling
-- Built-in CLI for testing and debugging
-- Built-in support for SSE
-- Built-in progress notifications
+- Built-in CLI for [testing](#test-with-mcp-cli) and [debugging](#inspect-with-mcp-inspector)
+- Built-in support for [SSE](#sse)
+- Built-in [progress notifications](#progress)
 
 ## Installation
 
