@@ -9,6 +9,9 @@ A TypeScript framework for building [MCP](https://modelcontextprotocol.io/) serv
 
 - Simple Tool, Resource, Prompt definition
 - Full TypeScript support
+
+* Built-in [logging](#logging)
+
 - Built-in [error handling](#errors)
 - Built-in CLI for [testing](#test-with-mcp-cli) and [debugging](#inspect-with-mcp-inspector)
 - Built-in support for [SSE](#sse)
@@ -109,6 +112,38 @@ server.addTool({
   },
 });
 ```
+
+#### Logging
+
+Tools can log messages to the client using the `log` object in the context object:
+
+```js
+server.addTool({
+  name: "download",
+  description: "Download a file",
+  parameters: z.object({
+    url: z.string(),
+  }),
+  execute: async (args, { log }) => {
+    log.info("Downloading file...", {
+      url,
+    });
+
+    // ...
+
+    log.info("Downloaded file");
+
+    return "done";
+  },
+});
+```
+
+The `log` object has the following methods:
+
+- `debug(message: string, data?: SerializableValue)`
+- `error(message: string, data?: SerializableValue)`
+- `info(message: string, data?: SerializableValue)`
+- `warn(message: string, data?: SerializableValue)`
 
 #### Errors
 

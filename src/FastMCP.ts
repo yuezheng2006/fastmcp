@@ -8,7 +8,11 @@ import {
   ListPromptsRequestSchema,
   ListResourcesRequestSchema,
   ListToolsRequestSchema,
+  LoggingLevel,
+  LoggingLevelSchema,
+  LoggingMessageNotificationSchema,
   McpError,
+  NotificationSchema,
   ReadResourceRequestSchema,
   ServerCapabilities,
   SetLevelRequestSchema,
@@ -42,6 +46,13 @@ export class UserError extends UnexpectedStateError {}
 
 type ToolParameters = z.ZodTypeAny;
 
+type Literal = boolean | null | number | string | undefined;
+
+type SerializableValue =
+  | Literal
+  | SerializableValue[]
+  | { [key: string]: SerializableValue };
+
 type Progress = {
   /**
    * The progress thus far. This should increase every time progress is made, even if the total is unknown.
@@ -55,6 +66,12 @@ type Progress = {
 
 type Context = {
   reportProgress: (progress: Progress) => Promise<void>;
+  log: {
+    debug: (message: string, data?: SerializableValue) => void;
+    error: (message: string, data?: SerializableValue) => void;
+    info: (message: string, data?: SerializableValue) => void;
+    warn: (message: string, data?: SerializableValue) => void;
+  };
 };
 
 type Tool<Params extends ToolParameters = ToolParameters> = {
@@ -212,8 +229,48 @@ export class FastMCP {
             });
           };
 
+          const log = {
+            debug: (message: string, context?: SerializableValue) => {
+              server.sendLoggingMessage({
+                level: "debug",
+                data: {
+                  message,
+                  context,
+                },
+              });
+            },
+            error: (message: string, context?: SerializableValue) => {
+              server.sendLoggingMessage({
+                level: "error",
+                data: {
+                  message,
+                  context,
+                },
+              });
+            },
+            info: (message: string, context?: SerializableValue) => {
+              server.sendLoggingMessage({
+                level: "info",
+                data: {
+                  message,
+                  context,
+                },
+              });
+            },
+            warn: (message: string, context?: SerializableValue) => {
+              server.sendLoggingMessage({
+                level: "warning",
+                data: {
+                  message,
+                  context,
+                },
+              });
+            },
+          };
+
           result = await tool.execute(args, {
             reportProgress,
+            log,
           });
         } catch (error) {
           if (error instanceof UserError) {

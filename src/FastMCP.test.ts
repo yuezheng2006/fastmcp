@@ -6,7 +6,12 @@ import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
 import { getRandomPort } from "get-port-please";
 import { EventSource } from "eventsource";
 import { setTimeout as delay } from "timers/promises";
-import { ErrorCode, McpError } from "@modelcontextprotocol/sdk/types.js";
+import {
+  ErrorCode,
+  JSONRPCMessage,
+  LoggingMessageNotificationSchema,
+  McpError,
+} from "@modelcontextprotocol/sdk/types.js";
 
 // @ts-expect-error - figure out how to use --experimental-eventsource with vitest
 global.EventSource = EventSource;
@@ -16,7 +21,13 @@ const runWithTestServer = async ({
   start,
 }: {
   start: () => Promise<FastMCP>;
-  run: ({ client, server }: { client: Client, server: FastMCP }) => Promise<void>;
+  run: ({
+    client,
+    server,
+  }: {
+    client: Client;
+    server: FastMCP;
+  }) => Promise<void>;
 }) => {
   const port = await getRandomPort();
 
@@ -274,15 +285,110 @@ test("sets logging levels", async () => {
     run: async ({ client, server }) => {
       await client.setLoggingLevel("debug");
 
-      expect(
-        server.loggingLevel,
-      ).toBe("debug");
+      expect(server.loggingLevel).toBe("debug");
 
       await client.setLoggingLevel("info");
 
-      expect(
-        server.loggingLevel,
-      ).toBe("info");
+      expect(server.loggingLevel).toBe("info");
+    },
+  });
+});
+
+const onMessage = (
+  client: Client,
+  callback: (message: JSONRPCMessage) => void,
+) => {
+  if (!client.transport) {
+    throw new Error("Transport not set");
+  }
+
+  const onmessage = client.transport.onmessage;
+
+  if (!onmessage) {
+    throw new Error("onmessage not set");
+  }
+
+  client.transport.onmessage = (message) => {
+    console.log("message", message);
+
+    onmessage(message);
+
+    callback(message);
+  };
+};
+
+test("sends logging messages to the client", async () => {
+  await runWithTestServer({
+    start: async () => {
+      const server = new FastMCP({
+        name: "Test",
+        version: "1.0.0",
+      });
+
+      server.addTool({
+        name: "add",
+        description: "Add two numbers",
+        parameters: z.object({
+          a: z.number(),
+          b: z.number(),
+        }),
+        execute: async (args, { log }) => {
+          log.debug("debug message", {
+            foo: "bar",
+          });
+          log.error("error message");
+          log.info("info message");
+          log.warn("warn message");
+
+          return args.a + args.b;
+        },
+      });
+
+      return server;
+    },
+    run: async ({ client, server }) => {
+      const onLog = vi.fn();
+
+      client.setNotificationHandler(
+        LoggingMessageNotificationSchema,
+        (message) => {
+          if (message.method === "notifications/message") {
+            onLog({
+              level: message.params.level,
+              ...(message.params.data ?? {}),
+            });
+          }
+        },
+      );
+
+      await client.callTool({
+        name: "add",
+        arguments: {
+          a: 1,
+          b: 2,
+        },
+      });
+
+      expect(onLog).toHaveBeenCalledTimes(4);
+      expect(onLog).toHaveBeenNthCalledWith(1, {
+        level: "debug",
+        message: "debug message",
+        context: {
+          foo: "bar",
+        },
+      });
+      expect(onLog).toHaveBeenNthCalledWith(2, {
+        level: "error",
+        message: "error message",
+      });
+      expect(onLog).toHaveBeenNthCalledWith(3, {
+        level: "info",
+        message: "info message",
+      });
+      expect(onLog).toHaveBeenNthCalledWith(4, {
+        level: "warning",
+        message: "warn message",
+      });
     },
   });
 });
