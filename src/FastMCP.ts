@@ -81,8 +81,6 @@ const TextContentZodSchema = z
   })
   .strict();
 
-type TextContent = z.infer<typeof TextContentZodSchema>;
-
 const ImageContentZodSchema = z
   .object({
     type: z.literal("image"),
@@ -96,8 +94,6 @@ const ImageContentZodSchema = z
     mimeType: z.string(),
   })
   .strict();
-
-type ImageContent = z.infer<typeof ImageContentZodSchema>;
 
 const ContentZodSchema = z.discriminatedUnion("type", [
   TextContentZodSchema,
@@ -229,7 +225,7 @@ export class FastMCP {
 
     server.setRequestHandler(
       CallToolRequestSchema,
-      async (request, ...extra) => {
+      async (request) => {
         const tool = this.#tools.find(
           (tool) => tool.name === request.params.name,
         );

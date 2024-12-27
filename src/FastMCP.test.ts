@@ -163,7 +163,7 @@ test("returns a list", async () => {
           a: z.number(),
           b: z.number(),
         }),
-        execute: async (args) => {
+        execute: async () => {
           return {
             content: [
               { type: "text", text: "a" },
@@ -368,7 +368,7 @@ test("sends logging messages to the client", async () => {
 
       return server;
     },
-    run: async ({ client, server }) => {
+    run: async ({ client }) => {
       const onLog = vi.fn();
 
       client.setNotificationHandler(
