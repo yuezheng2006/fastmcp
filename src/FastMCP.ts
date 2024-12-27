@@ -19,6 +19,9 @@ import http from "http";
 import { readFile } from "fs/promises";
 import { fileTypeFromBuffer } from "file-type";
 
+/**
+ * Generates an image content object from a URL, file path, or buffer.
+ */
 export const imageContent = async (
   input: { url: string } | { path: string } | { buffer: Buffer },
 ): Promise<ImageContent> => {
@@ -74,6 +77,9 @@ class UnexpectedStateError extends FastMCPError {
   }
 }
 
+/**
+ * An error that is meant to be surfaced to the user.
+ */
 export class UserError extends UnexpectedStateError {}
 
 type ToolParameters = z.ZodTypeAny;
