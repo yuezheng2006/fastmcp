@@ -134,7 +134,7 @@ server.addTool({
       total: 100,
     });
 
-    return 'done';
+    return "done";
   },
 });
 ```

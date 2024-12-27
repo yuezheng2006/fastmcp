@@ -6,6 +6,7 @@ import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
 import { getRandomPort } from "get-port-please";
 import { EventSource } from "eventsource";
 import { setTimeout as delay } from "timers/promises";
+import { ErrorCode, McpError } from "@modelcontextprotocol/sdk/types.js";
 
 // @ts-expect-error - figure out how to use --experimental-eventsource with vitest
 global.EventSource = EventSource;
@@ -133,6 +134,35 @@ test("calls a tool", async () => {
       ).toEqual({
         content: [{ type: "text", text: "3" }],
       });
+    },
+  });
+});
+
+test("calling an unknown tool throws McpError with MethodNotFound code", async () => {
+  await runWithTestServer({
+    start: async () => {
+      const server = new FastMCP({
+        name: "Test",
+        version: "1.0.0",
+      });
+
+      return server;
+    },
+    run: async ({ client }) => {
+      try {
+        await client.callTool({
+          name: "add",
+          arguments: {
+            a: 1,
+            b: 2,
+          },
+        });
+      } catch (error) {
+        expect(error).toBeInstanceOf(McpError);
+
+        // @ts-expect-error - we know that error is an McpError
+        expect(error.code).toBe(ErrorCode.MethodNotFound);
+      }
     },
   });
 });
