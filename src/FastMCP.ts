@@ -266,6 +266,9 @@ export class FastMCP {
     });
   }
 
+  /**
+   * Returns the current logging level.
+   */
   public get loggingLevel(): LoggingLevel {
     return this.#loggingLevel;
   }
@@ -512,20 +515,32 @@ export class FastMCP {
     });
   }
 
+  /**
+   * Adds a tool to the server.
+   */
   public addTool<Params extends ToolParameters>(tool: Tool<Params>) {
     this.#tools.push(tool as unknown as Tool);
   }
 
+  /**
+   * Adds a resource to the server.
+   */
   public addResource(resource: Resource) {
     this.#resources.push(resource);
   }
 
+  /**
+   * Adds a prompt to the server.
+   */
   public addPrompt<const Args extends PromptArgument[]>(prompt: Prompt<Args>) {
     this.#prompts.push(prompt);
   }
 
   #httpServer: http.Server | null = null;
 
+  /**
+   * Starts the server.
+   */
   public async start(
     options:
       | { transportType: "stdio" }
@@ -662,6 +677,9 @@ export class FastMCP {
     }
   }
 
+  /**
+   * Stops the server.
+   */
   public async stop() {
     if (this.#httpServer) {
       this.#httpServer.close();
