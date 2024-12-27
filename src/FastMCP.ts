@@ -11,6 +11,7 @@ import {
   McpError,
   ReadResourceRequestSchema,
   ServerCapabilities,
+  SetLevelRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { zodToJsonSchema } from "zod-to-json-schema";
 import type { z } from "zod";
@@ -107,6 +108,7 @@ export class FastMCP {
   #prompts: Prompt[];
   #server: Server | null = null;
   #options: ServerOptions;
+  #loggingLevel: LoggingLevel = "info";
 
   constructor(public options: ServerOptions) {
     this.#options = options;
@@ -129,6 +131,12 @@ export class FastMCP {
     if (this.#prompts.length) {
       this.setupPromptHandlers(server);
     }
+
+    server.setRequestHandler(SetLevelRequestSchema, (request) => {
+      this.#loggingLevel = request.params.level;
+
+      return {};
+    });
   }
 
   private setupErrorHandling(server: Server) {
@@ -139,6 +147,10 @@ export class FastMCP {
       await server.close();
       process.exit(0);
     });
+  }
+
+  public get loggingLevel() {
+    return this.#loggingLevel;
   }
 
   private setupToolHandlers(server: Server) {
@@ -379,6 +391,8 @@ export class FastMCP {
     if (this.#prompts.length) {
       capabilities.prompts = {};
     }
+
+    capabilities.logging = {};
 
     this.#server = new Server(
       { name: this.#options.name, version: this.#options.version },

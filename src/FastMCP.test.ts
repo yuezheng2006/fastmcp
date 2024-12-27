@@ -16,7 +16,7 @@ const runWithTestServer = async ({
   start,
 }: {
   start: () => Promise<FastMCP>;
-  run: ({ client }: { client: Client }) => Promise<void>;
+  run: ({ client, server }: { client: Client, server: FastMCP }) => Promise<void>;
 }) => {
   const port = await getRandomPort();
 
@@ -47,7 +47,7 @@ const runWithTestServer = async ({
 
     await client.connect(transport);
 
-    await run({ client });
+    await run({ client, server });
   } finally {
     await server.stop();
   }
@@ -257,6 +257,32 @@ test("tracks tool progress", async () => {
         progress: 0,
         total: 10,
       });
+    },
+  });
+});
+
+test("sets logging levels", async () => {
+  await runWithTestServer({
+    start: async () => {
+      const server = new FastMCP({
+        name: "Test",
+        version: "1.0.0",
+      });
+
+      return server;
+    },
+    run: async ({ client, server }) => {
+      await client.setLoggingLevel("debug");
+
+      expect(
+        server.loggingLevel,
+      ).toBe("debug");
+
+      await client.setLoggingLevel("info");
+
+      expect(
+        server.loggingLevel,
+      ).toBe("info");
     },
   });
 });
