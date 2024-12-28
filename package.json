@@ -1,7 +1,7 @@
 {
   "name": "fastmcp",
   "version": "1.0.0",
-  "main": "dist/fastmcp.js",
+  "main": "dist/FastMCP.js",
   "scripts": {
     "build": "tsup",
     "test": "vitest run && tsc",
@@ -18,8 +18,8 @@
   "author": "Frank Fiegel <frank@glama.ai>",
   "license": "MIT",
   "description": "A TypeScript framework for building MCP servers.",
-  "module": "dist/fastmcp.js",
-  "types": "dist/fastmcp.d.ts",
+  "module": "dist/FastMCP.js",
+  "types": "dist/FastMCP.d.ts",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.4",
     "execa": "^9.5.2",
