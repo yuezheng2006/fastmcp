@@ -2,7 +2,7 @@
 
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
-import { $ } from "execa";
+import { execa } from "execa";
 
 await yargs(hideBin(process.argv))
   .scriptName("fastmcp")
@@ -17,11 +17,15 @@ await yargs(hideBin(process.argv))
       });
     },
     async (argv) => {
-      await $({
-        stdin: "inherit",
-        stdout: "inherit",
-        stderr: "inherit",
-      })`npx @wong2/mcp-cli npx tsx ${argv.file}`;
+      try {
+        await execa({
+          stdin: "inherit",
+          stdout: "inherit",
+          stderr: "inherit",
+        })`npx @wong2/mcp-cli tsx ${argv.file}`;
+      } catch {
+        process.exit(1);
+      }
     },
   )
   .command(
@@ -35,10 +39,14 @@ await yargs(hideBin(process.argv))
       });
     },
     async (argv) => {
-      await $({
-        stdout: "inherit",
-        stderr: "inherit",
-      })`npx @modelcontextprotocol/inspector npx tsx ${argv.file}`;
+      try {
+        await execa({
+          stdout: "inherit",
+          stderr: "inherit",
+        })`npx @modelcontextprotocol/inspector npx tsx ${argv.file}`;
+      } catch {
+        process.exit(1);
+      }
     },
   )
   .help()
