@@ -17,15 +17,11 @@ await yargs(hideBin(process.argv))
       });
     },
     async (argv) => {
-      const command = argv.file.endsWith(".ts")
-        ? ["npx", "tsx", argv.file]
-        : ["node", argv.file];
-
       await $({
         stdin: "inherit",
         stdout: "inherit",
         stderr: "inherit",
-      })`npx @wong2/mcp-cli ${command}`;
+      })`npx @wong2/mcp-cli npx tsx ${argv.file}`;
     },
   )
   .command(
