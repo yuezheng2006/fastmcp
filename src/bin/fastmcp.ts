@@ -42,7 +42,7 @@ await yargs(hideBin(process.argv))
       await $({
         stdout: "inherit",
         stderr: "inherit",
-      })`npx @modelcontextprotocol/inspector node ${argv.file}`;
+      })`npx @modelcontextprotocol/inspector tsx ${argv.file}`;
     },
   )
   .help()
