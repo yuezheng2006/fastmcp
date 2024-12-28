@@ -53,7 +53,12 @@ server.start({
 You can test the server in terminal with:
 
 ```bash
-npx fastmcp dev server.js
+git clone https://github.com/punkpeye/fastmcp.git
+cd fastmcp
+# Test the addition server example using CLI:
+npx fastmcp dev src/examples/addition.ts
+# Test the additition server example using MCP Inspector:
+npx fastmcp inspect src/examples/additition.ts
 ```
 
 ### SSE
