@@ -55,10 +55,13 @@ You can test the server in terminal with:
 ```bash
 git clone https://github.com/punkpeye/fastmcp.git
 cd fastmcp
+
+npm install
+
 # Test the addition server example using CLI:
 npx fastmcp dev src/examples/addition.ts
-# Test the additition server example using MCP Inspector:
-npx fastmcp inspect src/examples/additition.ts
+# Test the addition server example using MCP Inspector:
+npx fastmcp inspect src/examples/addition.ts
 ```
 
 ### SSE
