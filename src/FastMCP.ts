@@ -1,6 +1,5 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import {
   CallToolRequestSchema,
   ErrorCode,
@@ -15,9 +14,9 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { zodToJsonSchema } from "zod-to-json-schema";
 import { z } from "zod";
-import http from "http";
 import { readFile } from "fs/promises";
 import { fileTypeFromBuffer } from "file-type";
+import { startSSEServer, type SSEServer } from "mcp-proxy";
 
 /**
  * Generates an image content object from a URL, file path, or buffer.
@@ -542,7 +541,7 @@ export class FastMCP {
     this.#prompts.push(prompt);
   }
 
-  #httpServer: http.Server | null = null;
+  #sseServer: SSEServer | null = null;
 
   /**
    * Starts the server.
@@ -587,99 +586,13 @@ export class FastMCP {
 
       console.error(`server is running on stdio`);
     } else if (options.transportType === "sse") {
-      let activeTransport: SSEServerTransport | null = null;
-
-      /**
-       * Adopted from https://dev.classmethod.jp/articles/mcp-sse/
-       */
-      this.#httpServer = http.createServer(async (req, res) => {
-        if (req.method === "GET" && req.url === options.sse.endpoint) {
-          const transport = new SSEServerTransport("/messages", res);
-
-          activeTransport = transport;
-
-          if (!this.#server) {
-            throw new Error("Server not initialized");
-          }
-
-          await this.#server.connect(transport);
-
-          res.on("close", () => {
-            console.log("SSE connection closed");
-            if (activeTransport === transport) {
-              activeTransport = null;
-            }
-          });
-
-          this.startSending(transport);
-          return;
-        }
-
-        if (req.method === "POST" && req.url?.startsWith("/messages")) {
-          if (!activeTransport) {
-            res.writeHead(400).end("No active transport");
-            return;
-          }
-          await activeTransport.handlePostMessage(req, res);
-          return;
-        }
-
-        res.writeHead(404).end();
+      this.#sseServer = await startSSEServer({
+        endpoint: options.sse.endpoint as `/${string}`,
+        port: options.sse.port,
+        server: this.#server,
       });
-
-      this.#httpServer.listen(options.sse.port, "0.0.0.0");
-
-      console.error(
-        `server is running on SSE at http://localhost:${options.sse.port}${options.sse.endpoint}`,
-      );
     } else {
       throw new Error("Invalid transport type");
-    }
-  }
-
-  /**
-   * @see https://dev.classmethod.jp/articles/mcp-sse/
-   */
-  private async startSending(transport: SSEServerTransport) {
-    try {
-      await transport.send({
-        jsonrpc: "2.0",
-        method: "sse/connection",
-        params: { message: "SSE Connection established" },
-      });
-
-      let messageCount = 0;
-      const interval = setInterval(async () => {
-        messageCount++;
-
-        const message = `Message ${messageCount} at ${new Date().toISOString()}`;
-
-        try {
-          await transport.send({
-            jsonrpc: "2.0",
-            method: "sse/message",
-            params: { data: message },
-          });
-
-          console.log(`Sent: ${message}`);
-
-          if (messageCount === 10) {
-            clearInterval(interval);
-
-            await transport.send({
-              jsonrpc: "2.0",
-              method: "sse/complete",
-              params: { message: "Stream completed" },
-            });
-            console.log("Stream completed");
-          }
-        } catch (error) {
-          console.error("Error sending message:", error);
-          clearInterval(interval);
-        }
-      }, 1000);
-    } catch (error) {
-      console.error("Error in startSending:", error);
     }
   }
 
@@ -687,8 +600,8 @@ export class FastMCP {
    * Stops the server.
    */
   public async stop() {
-    if (this.#httpServer) {
-      this.#httpServer.close();
+    if (this.#sseServer) {
+      this.#sseServer.close();
     }
   }
 }
