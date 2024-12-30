@@ -414,6 +414,8 @@ npx fastmcp inspect server.ts
 > [!NOTE]
 > If you've developed a server using FastMCP, please [submit a PR](https://github.com/punkpeye/fastmcp) to showcase it here!
 
+* https://github.com/apinetwork/piapi-mcp-server
+
 ## Acknowledgements
 
 - FastMCP is inspired by the [Python implementation](https://github.com/jlowin/fastmcp) by [Jonathan Lowin](https://github.com/jlowin).
