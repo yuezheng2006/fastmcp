@@ -16,11 +16,11 @@ import {
 
 const runWithTestServer = async ({
   run,
-  client: clientOverride,
-  start,
+  client: createClient,
+  server: createServer,
 }: {
-  start: () => Promise<FastMCP>;
-  client?: Client;
+  server?: () => Promise<FastMCP>;
+  client?: () => Promise<Client>;
   run: ({
     client,
     server,
@@ -32,7 +32,12 @@ const runWithTestServer = async ({
 }) => {
   const port = await getRandomPort();
 
-  const server = await start();
+  const server = createServer
+    ? await createServer()
+    : new FastMCP({
+        name: "Test",
+        version: "1.0.0",
+      });
 
   await server.start({
     transportType: "sse",
@@ -43,17 +48,17 @@ const runWithTestServer = async ({
   });
 
   try {
-    const client =
-      clientOverride ??
-      new Client(
-        {
-          name: "example-client",
-          version: "1.0.0",
-        },
-        {
-          capabilities: {},
-        },
-      );
+    const client = createClient
+      ? await createClient()
+      : new Client(
+          {
+            name: "example-client",
+            version: "1.0.0",
+          },
+          {
+            capabilities: {},
+          },
+        );
 
     const transport = new SSEClientTransport(
       new URL(`http://localhost:${port}/sse`),
@@ -77,7 +82,7 @@ const runWithTestServer = async ({
 
 test("adds tools", async () => {
   await runWithTestServer({
-    start: async () => {
+    server: async () => {
       const server = new FastMCP({
         name: "Test",
         version: "1.0.0",
@@ -122,7 +127,7 @@ test("adds tools", async () => {
 
 test("calls a tool", async () => {
   await runWithTestServer({
-    start: async () => {
+    server: async () => {
       const server = new FastMCP({
         name: "Test",
         version: "1.0.0",
@@ -160,7 +165,7 @@ test("calls a tool", async () => {
 
 test("returns a list", async () => {
   await runWithTestServer({
-    start: async () => {
+    server: async () => {
       const server = new FastMCP({
         name: "Test",
         version: "1.0.0",
@@ -206,7 +211,7 @@ test("returns a list", async () => {
 
 test("returns an image", async () => {
   await runWithTestServer({
-    start: async () => {
+    server: async () => {
       const server = new FastMCP({
         name: "Test",
         version: "1.0.0",
@@ -255,7 +260,7 @@ test("returns an image", async () => {
 
 test("handles UserError errors", async () => {
   await runWithTestServer({
-    start: async () => {
+    server: async () => {
       const server = new FastMCP({
         name: "Test",
         version: "1.0.0",
@@ -294,7 +299,7 @@ test("handles UserError errors", async () => {
 
 test("calling an unknown tool throws McpError with MethodNotFound code", async () => {
   await runWithTestServer({
-    start: async () => {
+    server: async () => {
       const server = new FastMCP({
         name: "Test",
         version: "1.0.0",
@@ -323,7 +328,7 @@ test("calling an unknown tool throws McpError with MethodNotFound code", async (
 
 test("tracks tool progress", async () => {
   await runWithTestServer({
-    start: async () => {
+    server: async () => {
       const server = new FastMCP({
         name: "Test",
         version: "1.0.0",
@@ -378,12 +383,6 @@ test("tracks tool progress", async () => {
 
 test("sets logging levels", async () => {
   await runWithTestServer({
-    start: async () => {
-      return new FastMCP({
-        name: "Test",
-        version: "1.0.0",
-      });
-    },
     run: async ({ client, session }) => {
       await client.setLoggingLevel("debug");
 
@@ -398,7 +397,7 @@ test("sets logging levels", async () => {
 
 test("sends logging messages to the client", async () => {
   await runWithTestServer({
-    start: async () => {
+    server: async () => {
       const server = new FastMCP({
         name: "Test",
         version: "1.0.0",
@@ -474,7 +473,7 @@ test("sends logging messages to the client", async () => {
 
 test("adds resources", async () => {
   await runWithTestServer({
-    start: async () => {
+    server: async () => {
       const server = new FastMCP({
         name: "Test",
         version: "1.0.0",
@@ -509,7 +508,7 @@ test("adds resources", async () => {
 
 test("adds prompts", async () => {
   await runWithTestServer({
-    start: async () => {
+    server: async () => {
       const server = new FastMCP({
         name: "Test",
         version: "1.0.0",
@@ -666,40 +665,34 @@ test("handles multiple clients", async () => {
 });
 
 test("session knows about client capabilities", async () => {
-  const client = new Client(
-    {
-      name: "example-client",
-      version: "1.0.0",
-    },
-    {
-      capabilities: {
-        roots: {
-          listChanged: true,
-        },
-      },
-    },
-  );
-
-  client.setRequestHandler(ListRootsRequestSchema, () => {
-    return {
-      roots: [
-        {
-          uri: "file:///home/user/projects/frontend",
-          name: "Frontend Repository",
-        },
-      ],
-    };
-  });
-
   await runWithTestServer({
-    client,
-    start: async () => {
-      const server = new FastMCP({
-        name: "Test",
-        version: "1.0.0",
+    client: async () => {
+      const client = new Client(
+        {
+          name: "example-client",
+          version: "1.0.0",
+        },
+        {
+          capabilities: {
+            roots: {
+              listChanged: true,
+            },
+          },
+        },
+      );
+
+      client.setRequestHandler(ListRootsRequestSchema, () => {
+        return {
+          roots: [
+            {
+              uri: "file:///home/user/projects/frontend",
+              name: "Frontend Repository",
+            },
+          ],
+        };
       });
 
-      return server;
+      return client;
     },
     run: async ({ session }) => {
       expect(session.clientCapabilities).toEqual({
@@ -712,40 +705,34 @@ test("session knows about client capabilities", async () => {
 });
 
 test("session knows about roots", async () => {
-  const client = new Client(
-    {
-      name: "example-client",
-      version: "1.0.0",
-    },
-    {
-      capabilities: {
-        roots: {
-          listChanged: true,
-        },
-      },
-    },
-  );
-
-  client.setRequestHandler(ListRootsRequestSchema, () => {
-    return {
-      roots: [
-        {
-          uri: "file:///home/user/projects/frontend",
-          name: "Frontend Repository",
-        },
-      ],
-    };
-  });
-
   await runWithTestServer({
-    client,
-    start: async () => {
-      const server = new FastMCP({
-        name: "Test",
-        version: "1.0.0",
+    client: async () => {
+      const client = new Client(
+        {
+          name: "example-client",
+          version: "1.0.0",
+        },
+        {
+          capabilities: {
+            roots: {
+              listChanged: true,
+            },
+          },
+        },
+      );
+
+      client.setRequestHandler(ListRootsRequestSchema, () => {
+        return {
+          roots: [
+            {
+              uri: "file:///home/user/projects/frontend",
+              name: "Frontend Repository",
+            },
+          ],
+        };
       });
 
-      return server;
+      return client;
     },
     run: async ({ session }) => {
       expect(session.roots).toEqual([
@@ -759,20 +746,6 @@ test("session knows about roots", async () => {
 });
 
 test("session listens to roots changes", async () => {
-  const client = new Client(
-    {
-      name: "example-client",
-      version: "1.0.0",
-    },
-    {
-      capabilities: {
-        roots: {
-          listChanged: true,
-        },
-      },
-    },
-  );
-
   let clientRoots: Root[] = [
     {
       uri: "file:///home/user/projects/frontend",
@@ -780,23 +753,31 @@ test("session listens to roots changes", async () => {
     },
   ];
 
-  client.setRequestHandler(ListRootsRequestSchema, () => {
-    return {
-      roots: clientRoots,
-    };
-  });
-
   await runWithTestServer({
-    client,
-    start: async () => {
-      const server = new FastMCP({
-        name: "Test",
-        version: "1.0.0",
+    client: async () => {
+      const client = new Client(
+        {
+          name: "example-client",
+          version: "1.0.0",
+        },
+        {
+          capabilities: {
+            roots: {
+              listChanged: true,
+            },
+          },
+        },
+      );
+
+      client.setRequestHandler(ListRootsRequestSchema, () => {
+        return {
+          roots: clientRoots,
+        };
       });
 
-      return server;
+      return client;
     },
-    run: async ({ session }) => {
+    run: async ({ session, client }) => {
       expect(session.roots).toEqual([
         {
           uri: "file:///home/user/projects/frontend",
@@ -847,14 +828,6 @@ test("session listens to roots changes", async () => {
 
 test("session sends pings to the client", async () => {
   await runWithTestServer({
-    start: async () => {
-      const server = new FastMCP({
-        name: "Test",
-        version: "1.0.0",
-      });
-
-      return server;
-    },
     run: async ({ client }) => {
       const onPing = vi.fn().mockReturnValue({});
 
