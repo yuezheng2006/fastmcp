@@ -2,6 +2,7 @@ import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
   CallToolRequestSchema,
+  ClientCapabilities,
   ErrorCode,
   GetPromptRequestSchema,
   ListPromptsRequestSchema,
@@ -14,6 +15,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { zodToJsonSchema } from "zod-to-json-schema";
 import { z } from "zod";
+import { setTimeout as delay } from "timers/promises";
 import { readFile } from "fs/promises";
 import { fileTypeFromBuffer } from "file-type";
 import { StrictEventEmitter } from "strict-event-emitter-types";
@@ -239,6 +241,7 @@ export class FastMCPSession {
   #capabilities: ServerCapabilities = {};
   #loggingLevel: LoggingLevel = "info";
   #server: Server;
+  #clientCapabilities?: ClientCapabilities;
 
   constructor({
     name,
@@ -288,12 +291,42 @@ export class FastMCPSession {
     }
   }
 
+  public get clientCapabilities(): ClientCapabilities | null {
+    return this.#clientCapabilities ?? null;
+  }
+
   public get server(): Server {
     return this.#server;
   }
 
-  public connect(transport: Transport) {
-    this.#server.connect(transport);
+  public async connect(transport: Transport) {
+    if (this.#server.transport) {
+      throw new UnexpectedStateError("Server is already connected");
+    }
+
+    await this.#server.connect(transport);
+
+    let attempt = 0;
+
+    while (attempt++ < 10) {
+      const capabilities = await this.#server.getClientCapabilities();
+
+      if (capabilities) {
+        this.#clientCapabilities = capabilities;
+
+        break;
+      }
+
+      await delay(100);
+    }
+
+    if (!this.#clientCapabilities) {
+      throw new UnexpectedStateError("Server did not connect");
+    }
+  }
+
+  public async close() {
+    await this.#server.close();
   }
 
   private setupErrorHandling() {
@@ -657,12 +690,9 @@ export class FastMCP extends FastMCPEventEmitter {
         onConnect: async (session) => {
           this.#sessions.push(session);
 
-          // TODO investigate where is the race condition
-          setTimeout(() => {
-            this.emit("connect", {
-              session,
-            });
-          }, 100);
+          this.emit("connect", {
+            session,
+          });
         },
       });
 
