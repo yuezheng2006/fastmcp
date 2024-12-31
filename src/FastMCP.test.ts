@@ -879,33 +879,22 @@ test("prompt argument autocompletion", async () => {
             name: "name",
             description: "Name of the country",
             required: true,
+            complete: async (value) => {
+              if (value === "Germ") {
+                return {
+                  values: ["Germany"],
+                };
+              }
+
+              return {
+                values: [],
+              };
+            },
           },
         ],
-        complete: async (name, value) => {
-          if (value === "Germ") {
-            return {
-              values: ["Germany"],
-            };
-          }
-
-          return {
-            values: [],
-          };
-        },
       });
 
       return server;
-    },
-    client: async () => {
-      return new Client(
-        {
-          name: "example-client",
-          version: "1.0.0",
-        },
-        {
-          capabilities: {},
-        },
-      );
     },
     run: async ({ client }) => {
       const response = await client.complete({
@@ -922,6 +911,54 @@ test("prompt argument autocompletion", async () => {
       expect(response).toEqual({
         completion: {
           values: ["Germany"],
+        },
+      });
+    },
+  });
+});
+
+test("adds automatic prompt argument completion when enum is provided", async () => {
+  await runWithTestServer({
+    server: async () => {
+      const server = new FastMCP({
+        name: "Test",
+        version: "1.0.0",
+      });
+
+      server.addPrompt({
+        name: "countryPoem",
+        description: "Writes a poem about a country",
+        load: async ({ name }) => {
+          return `Hello, ${name}!`;
+        },
+        arguments: [
+          {
+            name: "name",
+            description: "Name of the country",
+            required: true,
+            enum: ["Germany", "France", "Italy"],
+          },
+        ],
+      });
+
+      return server;
+    },
+    run: async ({ client }) => {
+      const response = await client.complete({
+        ref: {
+          type: "ref/prompt",
+          name: "countryPoem",
+        },
+        argument: {
+          name: "name",
+          value: "Germ",
+        },
+      });
+
+      expect(response).toEqual({
+        completion: {
+          values: ["Germany"],
+          total: 1,
         },
       });
     },

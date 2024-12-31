@@ -410,19 +410,41 @@ server.addPrompt({
       name: "name",
       description: "Name of the country",
       required: true,
+      complete: async (value) => {
+        if (value === "Germ") {
+          return {
+            values: ["Germany"],
+          };
+        }
+
+        return {
+          values: [],
+        };
+      },
     },
   ],
-  complete: async (name, value) => {
-    if (value === "Germ") {
-      return {
-        values: ["Germany"],
-      };
-    }
+});
+```
 
-    return {
-      values: [],
-    };
+#### Automatic prompt argument completion
+
+If you provide an `enum` array for an argument, the server will automatically provide completions for the argument.
+
+```js
+server.addPrompt({
+  name: "countryPoem",
+  description: "Writes a poem about a country",
+  load: async ({ name }) => {
+    return `Hello, ${name}!`;
   },
+  arguments: [
+    {
+      name: "name",
+      description: "Name of the country",
+      required: true,
+      enum: ["Germany", "France", "Italy"],
+    },
+  ],
 });
 ```
 

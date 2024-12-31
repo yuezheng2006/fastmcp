@@ -24,6 +24,7 @@
     "@modelcontextprotocol/sdk": "^1.0.4",
     "execa": "^9.5.2",
     "file-type": "^19.6.0",
+    "fuse.js": "^7.0.0",
     "mcp-proxy": "^2.4.0",
     "strict-event-emitter-types": "^2.0.0",
     "yargs": "^17.7.2",

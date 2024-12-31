@@ -23,6 +23,7 @@ import { readFile } from "fs/promises";
 import { fileTypeFromBuffer } from "file-type";
 import { StrictEventEmitter } from "strict-event-emitter-types";
 import { EventEmitter } from "events";
+import Fuse from "fuse.js";
 import { startSSEServer } from "mcp-proxy";
 import { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 
@@ -187,6 +188,12 @@ const ContentResultZodSchema = z
   })
   .strict() satisfies z.ZodType<ContentResult>;
 
+type Completion = {
+  values: string[];
+  total?: number;
+  hasMore?: boolean;
+};
+
 /**
  * https://github.com/modelcontextprotocol/typescript-sdk/blob/3164da64d085ec4e022ae881329eee7b72f208d4/src/types.ts#L983-L1003
  */
@@ -203,9 +210,7 @@ const CompletionZodSchema = z.object({
    * Indicates whether there are additional completion options beyond those provided in the current response, even if the exact total is unknown.
    */
   hasMore: z.optional(z.boolean()),
-});
-
-type Completion = z.infer<typeof CompletionZodSchema>;
+}) satisfies z.ZodType<Completion>;
 
 type Tool<Params extends ToolParameters = ToolParameters> = {
   name: string;
@@ -225,14 +230,17 @@ type Resource = {
   load: () => Promise<{ text: string } | { blob: string }>;
 };
 
-type PromptArgument = Readonly<{
+type ArgumentValueCompleter = (value: string) => Promise<Completion>;
+
+type InputPromptArgument = Readonly<{
   name: string;
   description?: string;
   required?: boolean;
-  complete?: (name: string, value: string) => Promise<Completion>;
+  complete?: ArgumentValueCompleter;
+  enum?: string[];
 }>;
 
-type ArgumentsToObject<T extends PromptArgument[]> = {
+type ArgumentsToObject<T extends InputPromptArgument[]> = {
   [K in T[number]["name"]]: Extract<
     T[number],
     { name: K }
@@ -241,18 +249,33 @@ type ArgumentsToObject<T extends PromptArgument[]> = {
     : string | undefined;
 };
 
-type Prompt<
-  Arguments extends PromptArgument[] = PromptArgument[],
+type InputPrompt<
+  Arguments extends InputPromptArgument[] = InputPromptArgument[],
   Args = ArgumentsToObject<Arguments>,
 > = {
   name: string;
   description?: string;
-  arguments?: Arguments;
+  arguments?: InputPromptArgument[];
   load: (args: Args) => Promise<string>;
-  complete?: (
-    name: Arguments[number]["name"],
-    value: string,
-  ) => Promise<Completion>;
+};
+
+type PromptArgument = Readonly<{
+  name: string;
+  description?: string;
+  required?: boolean;
+  complete?: ArgumentValueCompleter;
+  enum?: string[];
+}>;
+
+type Prompt<
+  Arguments extends PromptArgument[] = PromptArgument[],
+  Args = ArgumentsToObject<Arguments>,
+> = {
+  arguments?: PromptArgument[];
+  complete?: (name: string, value: string) => Promise<Completion>;
+  description?: string;
+  load: (args: Args) => Promise<string>;
+  name: string;
 };
 
 type ServerOptions = {
@@ -308,7 +331,10 @@ export class FastMCPSession extends FastMCPSessionEventEmitter {
     }
 
     if (prompts.length) {
-      this.#prompts = prompts;
+      for (const prompt of prompts) {
+        this.addPrompt(prompt);
+      }
+
       this.#capabilities.prompts = {};
     }
 
@@ -335,6 +361,49 @@ export class FastMCPSession extends FastMCPSessionEventEmitter {
     if (prompts.length) {
       this.setupPromptHandlers(prompts);
     }
+  }
+
+  private addPrompt(inputPrompt: InputPrompt) {
+    const completers: Record<string, ArgumentValueCompleter> = {};
+    const enums: Record<string, string[]> = {};
+
+    for (const argument of inputPrompt.arguments ?? []) {
+      if (argument.complete) {
+        completers[argument.name] = argument.complete;
+      }
+
+      if (argument.enum) {
+        enums[argument.name] = argument.enum;
+      }
+    }
+
+    const prompt = {
+      ...inputPrompt,
+      complete: async (name: string, value: string) => {
+        if (completers[name]) {
+          return await completers[name](value);
+        }
+
+        if (enums[name]) {
+          const fuse = new Fuse(enums[name], {
+            keys: ["value"],
+          });
+
+          const result = fuse.search(value);
+
+          return {
+            values: result.map((item) => item.item),
+            total: result.length,
+          };
+        }
+
+        return {
+          values: [],
+        };
+      },
+    };
+
+    this.#prompts.push(prompt);
   }
 
   public get clientCapabilities(): ClientCapabilities | null {
@@ -681,14 +750,12 @@ export class FastMCPSession extends FastMCPSessionEventEmitter {
 
       const args = request.params.arguments;
 
-      if (prompt.arguments) {
-        for (const arg of prompt.arguments) {
-          if (arg.required && !(args && arg.name in args)) {
-            throw new McpError(
-              ErrorCode.InvalidRequest,
-              `Missing required argument: ${arg.name}`,
-            );
-          }
+      for (const arg of prompt.arguments ?? []) {
+        if (arg.required && !(args && arg.name in args)) {
+          throw new McpError(
+            ErrorCode.InvalidRequest,
+            `Missing required argument: ${arg.name}`,
+          );
         }
       }
 
@@ -724,7 +791,7 @@ class FastMCPEventEmitter extends FastMCPEventEmitterBase {}
 
 export class FastMCP extends FastMCPEventEmitter {
   #options: ServerOptions;
-  #prompts: Prompt[] = [];
+  #prompts: InputPrompt[] = [];
   #resources: Resource[] = [];
   #sessions: FastMCPSession[] = [];
   #sseServer: SSEServer | null = null;
@@ -757,7 +824,9 @@ export class FastMCP extends FastMCPEventEmitter {
   /**
    * Adds a prompt to the server.
    */
-  public addPrompt<const Args extends PromptArgument[]>(prompt: Prompt<Args>) {
+  public addPrompt<const Args extends InputPromptArgument[]>(
+    prompt: InputPrompt<Args>,
+  ) {
     this.#prompts.push(prompt);
   }
 
