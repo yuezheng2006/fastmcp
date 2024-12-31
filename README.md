@@ -8,13 +8,12 @@ A TypeScript framework for building [MCP](https://modelcontextprotocol.io/) serv
 ## Features
 
 - Simple Tool, Resource, Prompt definition
-- Full TypeScript support
-- Built-in support for [image content](#returning-an-image)
-- Built-in [logging](#logging)
-- Built-in [error handling](#errors)
-- Built-in CLI for [testing](#test-with-mcp-cli) and [debugging](#inspect-with-mcp-inspector)
-- Built-in support for [SSE](#sse)
-- Built-in [progress notifications](#progress)
+- [Image content](#returning-an-image)
+- [Logging](#logging)
+- [Error handling](#errors)
+- [SSE](#sse)
+- [Progress notifications](#progress)
+- CLI for [testing](#test-with-mcp-cli) and [debugging](#inspect-with-mcp-inspector)
 
 ## Installation
 
@@ -414,7 +413,7 @@ npx fastmcp inspect server.ts
 > [!NOTE]
 > If you've developed a server using FastMCP, please [submit a PR](https://github.com/punkpeye/fastmcp) to showcase it here!
 
-* https://github.com/apinetwork/piapi-mcp-server
+- https://github.com/apinetwork/piapi-mcp-server
 
 ## Acknowledgements
 
