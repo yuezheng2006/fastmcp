@@ -558,9 +558,13 @@ export class FastMCPSession {
   }
 }
 
-export class FastMCP extends (EventEmitter as {
+const FastMCPEventEmitterBase: {
   new (): StrictEventEmitter<EventEmitter, FastMCPEvents>;
-}) {
+} = EventEmitter;
+
+class FastMCPEventEmitter extends FastMCPEventEmitterBase {}
+
+export class FastMCP extends FastMCPEventEmitter {
   #options: ServerOptions;
   #prompts: Prompt[] = [];
   #resources: Resource[] = [];
