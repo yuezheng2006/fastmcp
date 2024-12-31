@@ -637,47 +637,25 @@ export class FastMCP extends FastMCPEventEmitter {
 
       console.error(`server is running on stdio`);
     } else if (options.transportType === "sse") {
-      this.#sseServer = await startSSEServer({
+      this.#sseServer = await startSSEServer<FastMCPSession>({
         endpoint: options.sse.endpoint as `/${string}`,
         port: options.sse.port,
         createServer: async () => {
-          const session = new FastMCPSession({
+          return new FastMCPSession({
             name: this.#options.name,
             version: this.#options.version,
             tools: this.#tools,
             resources: this.#resources,
             prompts: this.#prompts,
           });
-
-          this.#sessions.push(session);
-
-          return session.server;
         },
-        onClose: (server) => {
-          const session = this.#sessions.find(
-            (session) => session.server === server,
-          );
-
-          if (!session) {
-            throw new UnexpectedStateError("Server not found");
-          }
-
-          this.#sessions = this.#sessions.filter(
-            (maybeOurSession) => maybeOurSession !== session,
-          );
-
+        onClose: (session) => {
           this.emit("disconnect", {
             session,
           });
         },
-        onConnect: async (server) => {
-          const session = this.#sessions.find(
-            (session) => session.server === server,
-          );
-
-          if (!session) {
-            throw new UnexpectedStateError("Server not found");
-          }
+        onConnect: async (session) => {
+          this.#sessions.push(session);
 
           // TODO investigate where is the race condition
           setTimeout(() => {

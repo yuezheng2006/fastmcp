@@ -18,8 +18,8 @@ importers:
         specifier: ^19.6.0
         version: 19.6.0
       mcp-proxy:
-        specifier: ^2.0.2
-        version: 2.0.2
+        specifier: ^2.2.0
+        version: 2.2.0
       strict-event-emitter-types:
         specifier: ^2.0.0
         version: 2.0.0
@@ -1150,8 +1150,8 @@ packages:
   fast-levenshtein@2.0.6:
     resolution: {integrity: sha512-DCXu6Ifhqcks7TZKY3Hxp3y6qphY5SJZmrWMDrKcERSOXWQdMhU9Ig/PYrzyw/ul9jOIyh0N4M0tbC5hodg8dw==}
 
-  fastmcp@1.6.1:
-    resolution: {integrity: sha512-4wTZDgSxxsnE0hhbSQbqXdrFizKMtabqs5TLMH0NLqMRCEtwtVM7VQso2aL9qpgezqktxz7aGHOSZJmjS7yKAw==}
+  fastmcp@1.7.0:
+    resolution: {integrity: sha512-SiUZbo+FjUW30lyTQNlbPl+pT+owiF+Mom1MZmG4S5nekHwhBhTUPzHRWskz5juPLUzy9g9fWtDEQrnJCE8Nhg==}
     hasBin: true
 
   fastq@1.18.0:
@@ -1538,12 +1538,8 @@ packages:
     engines: {node: '>= 18'}
     hasBin: true
 
-  mcp-proxy@1.3.1:
-    resolution: {integrity: sha512-MCZMz7PCa77dex+/fj+nut3bVARXJemIz7Zx98tjrfxFyVRz1/E9Sq8xaRQMLqHrH91WkIn9BlBslrkUXb2x6A==}
-    hasBin: true
-
-  mcp-proxy@2.0.2:
-    resolution: {integrity: sha512-OtzPev3N5AY6tBPYiuDydnjoWYKG2dQ10b+PsM7I7fpGJtNBxRX7rSfGkRZBJHm5/1LtxYUnlqE2D37FTgxL6Q==}
+  mcp-proxy@2.2.0:
+    resolution: {integrity: sha512-yaUk+9rmyBQhpleIDLkKD3PHrKRZVmFAjhXVTZHuVO9yNw7D+2y5y1qyzwTYa/Z7Itkh/8bIpavKU/c/TunG7w==}
     hasBin: true
 
   meow@13.2.0:
@@ -3433,12 +3429,13 @@ snapshots:
 
   fast-levenshtein@2.0.6: {}
 
-  fastmcp@1.6.1:
+  fastmcp@1.7.0:
     dependencies:
       '@modelcontextprotocol/sdk': 1.0.4
       execa: 9.5.2
       file-type: 19.6.0
-      mcp-proxy: 1.3.1
+      mcp-proxy: 2.2.0
+      strict-event-emitter-types: 2.0.0
       yargs: 17.7.2
       zod: 3.24.1
       zod-to-json-schema: 3.24.1(zod@3.24.1)
@@ -3804,18 +3801,11 @@ snapshots:
 
   marked@12.0.2: {}
 
-  mcp-proxy@1.3.1:
+  mcp-proxy@2.2.0:
     dependencies:
       '@modelcontextprotocol/sdk': 1.0.4
       eventsource: 3.0.2
-      fastmcp: 1.6.1
-      yargs: 17.7.2
-
-  mcp-proxy@2.0.2:
-    dependencies:
-      '@modelcontextprotocol/sdk': 1.0.4
-      eventsource: 3.0.2
-      fastmcp: 1.6.1
+      fastmcp: 1.7.0
       yargs: 17.7.2
 
   meow@13.2.0: {}
