@@ -36,6 +36,7 @@ type FastMCPEvents = {
 
 type FastMCPSessionEvents = {
   rootsChanged: (event: { roots: Root[] }) => void;
+  error: (event: { error: Error }) => void;
 };
 
 /**
@@ -315,6 +316,8 @@ export class FastMCPSession extends FastMCPSessionEventEmitter {
     return this.#server;
   }
 
+  #pingInterval: ReturnType<typeof setInterval> | null = null;
+
   public async connect(transport: Transport) {
     if (this.#server.transport) {
       throw new UnexpectedStateError("Server is already connected");
@@ -346,6 +349,15 @@ export class FastMCPSession extends FastMCPSessionEventEmitter {
       this.#roots = roots.roots;
     }
 
+    this.#pingInterval = setInterval(async () => {
+      try {
+        await this.#server.ping();
+      } catch (error) {
+        this.emit("error", {
+          error: error as Error,
+        });
+      }
+    }, 1000);
   }
 
   public get roots(): Root[] {
@@ -353,6 +365,10 @@ export class FastMCPSession extends FastMCPSessionEventEmitter {
   }
 
   public async close() {
+    if (this.#pingInterval) {
+      clearInterval(this.#pingInterval);
+    }
+
     await this.#server.close();
   }
 

@@ -10,6 +10,7 @@ import {
   ListRootsRequestSchema,
   LoggingMessageNotificationSchema,
   McpError,
+  PingRequestSchema,
   Root,
 } from "@modelcontextprotocol/sdk/types.js";
 
@@ -840,6 +841,28 @@ test("session listens to roots changes", async () => {
           },
         ],
       });
+    },
+  });
+});
+
+test("session sends pings to the client", async () => {
+  await runWithTestServer({
+    start: async () => {
+      const server = new FastMCP({
+        name: "Test",
+        version: "1.0.0",
+      });
+
+      return server;
+    },
+    run: async ({ client }) => {
+      const onPing = vi.fn().mockReturnValue({});
+
+      client.setRequestHandler(PingRequestSchema, onPing);
+
+      await delay(2000);
+
+      expect(onPing).toHaveBeenCalledTimes(1);
     },
   });
 });

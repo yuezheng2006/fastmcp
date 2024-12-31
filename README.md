@@ -15,6 +15,7 @@ A TypeScript framework for building [MCP](https://modelcontextprotocol.io/) serv
 - [SSE](#sse)
 - [Progress notifications](#progress)
 - [Typed server events](#typed-server-events)
+- Automated SSE pings
 - Roots
 - CLI for [testing](#test-with-mcp-cli) and [debugging](#inspect-with-mcp-inspector)
 
@@ -461,6 +462,10 @@ You can listen to events emitted by the session using the `on` method:
 ```ts
 session.on("rootsChanged", (event) => {
   console.log("Roots changed:", event.roots);
+});
+
+session.on("error", (event) => {
+  console.error("Error:", event.error);
 });
 ```
 
