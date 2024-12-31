@@ -506,6 +506,46 @@ test("adds resources", async () => {
   });
 });
 
+test("clients reads a resource", async () => {
+  await runWithTestServer({
+    server: async () => {
+      const server = new FastMCP({
+        name: "Test",
+        version: "1.0.0",
+      });
+
+      server.addResource({
+        uri: "file:///logs/app.log",
+        name: "Application Logs",
+        mimeType: "text/plain",
+        async load() {
+          return {
+            text: "Example log content",
+          };
+        },
+      });
+
+      return server;
+    },
+    run: async ({ client }) => {
+      expect(
+        await client.readResource({
+          uri: "file:///logs/app.log",
+        }),
+      ).toEqual({
+        contents: [
+          {
+            uri: "file:///logs/app.log",
+            name: "Application Logs",
+            text: "Example log content",
+            mimeType: "text/plain",
+          },
+        ],
+      });
+    },
+  });
+});
+
 test("adds prompts", async () => {
   await runWithTestServer({
     server: async () => {

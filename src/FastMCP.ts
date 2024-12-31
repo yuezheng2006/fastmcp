@@ -714,6 +714,7 @@ export class FastMCPSession extends FastMCPSessionEventEmitter {
             {
               uri: resource.uri,
               mimeType: resource.mimeType,
+              name: resource.name,
               ...result,
             },
           ],
