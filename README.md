@@ -415,6 +415,36 @@ server.on("disconnect", (event) => {
 });
 ```
 
+## `FastMCPSession`
+
+`FastMCPSession` represents a client session and provides methods to interact with the client.
+
+Refer to [Sessions](#sessions) for examples of how to obtain a `FastMCPSession` instance.
+
+### `clientCapabilities`
+
+The `clientCapabilities` property contains the client capabilities.
+
+```ts
+session.clientCapabilities;
+```
+
+### `loggingLevel`
+
+The `loggingLevel` property describes the logging level as set by the client.
+
+```ts
+session.loggingLevel;
+```
+
+### `server`
+
+The `server` property contains an instance of MCP server that is associated with the session.
+
+```ts
+session.server;
+```
+
 ## Running Your Server
 
 ### Test with `mcp-cli`
