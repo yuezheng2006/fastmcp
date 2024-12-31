@@ -13,9 +13,11 @@ import {
 
 const runWithTestServer = async ({
   run,
+  client: clientOverride,
   start,
 }: {
   start: () => Promise<FastMCP>;
+  client?: Client;
   run: ({
     client,
     server,
@@ -38,15 +40,17 @@ const runWithTestServer = async ({
   });
 
   try {
-    const client = new Client(
-      {
-        name: "example-client",
-        version: "1.0.0",
-      },
-      {
-        capabilities: {},
-      },
-    );
+    const client =
+      clientOverride ??
+      new Client(
+        {
+          name: "example-client",
+          version: "1.0.0",
+        },
+        {
+          capabilities: {},
+        },
+      );
 
     const transport = new SSEClientTransport(
       new URL(`http://localhost:${port}/sse`),
@@ -656,4 +660,50 @@ test("handles multiple clients", async () => {
   ]);
 
   await server.stop();
+});
+
+test("session knows about client capabilities", async () => {
+  const client = new Client(
+    {
+      name: "example-client",
+      version: "1.0.0",
+    },
+    {
+      capabilities: {
+        roots: {
+          listChanged: true,
+        },
+      },
+    },
+  );
+
+  client.setRequestHandler(ListRootsRequestSchema, () => {
+    return {
+      roots: [
+        {
+          uri: "file:///home/user/projects/frontend",
+          name: "Frontend Repository",
+        },
+      ],
+    };
+  });
+
+  await runWithTestServer({
+    client,
+    start: async () => {
+      const server = new FastMCP({
+        name: "Test",
+        version: "1.0.0",
+      });
+
+      return server;
+    },
+    run: async ({ session }) => {
+      expect(session.clientCapabilities).toEqual({
+        roots: {
+          listChanged: true,
+        },
+      });
+    },
+  });
 });
