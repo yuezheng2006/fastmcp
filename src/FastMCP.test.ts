@@ -647,7 +647,7 @@ test("handles multiple clients", async () => {
     new URL(`http://localhost:${port}/sse`),
   );
 
-  await client1.connect(transport2);
+  await client2.connect(transport2);
 
   await delay(100);
 
