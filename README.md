@@ -14,7 +14,7 @@ A TypeScript framework for building [MCP](https://modelcontextprotocol.io/) serv
 - [Error handling](#errors)
 - [SSE](#sse)
 - [Progress notifications](#progress)
-- [Typed events](#typed-events)
+- [Typed server events](#typed-server-events)
 - Roots
 - CLI for [testing](#test-with-mcp-cli) and [debugging](#inspect-with-mcp-inspector)
 
@@ -402,7 +402,7 @@ server.sessions;
 
 We allocate a new server instance for each client connection to enable 1:1 communication between a client and the server.
 
-### Typed events
+### Typed server events
 
 You can listen to events emitted by the server using the `on` method:
 
@@ -452,6 +452,16 @@ The `server` property contains an instance of MCP server that is associated with
 
 ```ts
 session.server;
+```
+
+### Typed session events
+
+You can listen to events emitted by the session using the `on` method:
+
+```ts
+session.on("rootsChanged", (event) => {
+  console.log("Roots changed:", event.roots);
+});
 ```
 
 ## Running Your Server

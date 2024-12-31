@@ -10,6 +10,7 @@ import {
   ListRootsRequestSchema,
   LoggingMessageNotificationSchema,
   McpError,
+  Root,
 } from "@modelcontextprotocol/sdk/types.js";
 
 const runWithTestServer = async ({
@@ -752,6 +753,93 @@ test("session knows about roots", async () => {
           name: "Frontend Repository",
         },
       ]);
+    },
+  });
+});
+
+test("session listens to roots changes", async () => {
+  const client = new Client(
+    {
+      name: "example-client",
+      version: "1.0.0",
+    },
+    {
+      capabilities: {
+        roots: {
+          listChanged: true,
+        },
+      },
+    },
+  );
+
+  let clientRoots: Root[] = [
+    {
+      uri: "file:///home/user/projects/frontend",
+      name: "Frontend Repository",
+    },
+  ];
+
+  client.setRequestHandler(ListRootsRequestSchema, () => {
+    return {
+      roots: clientRoots,
+    };
+  });
+
+  await runWithTestServer({
+    client,
+    start: async () => {
+      const server = new FastMCP({
+        name: "Test",
+        version: "1.0.0",
+      });
+
+      return server;
+    },
+    run: async ({ session }) => {
+      expect(session.roots).toEqual([
+        {
+          uri: "file:///home/user/projects/frontend",
+          name: "Frontend Repository",
+        },
+      ]);
+
+      clientRoots.push({
+        uri: "file:///home/user/projects/backend",
+        name: "Backend Repository",
+      });
+
+      await client.sendRootsListChanged();
+
+      const onRootsChanged = vi.fn();
+
+      session.on("rootsChanged", onRootsChanged);
+
+      await delay(100);
+
+      expect(session.roots).toEqual([
+        {
+          uri: "file:///home/user/projects/frontend",
+          name: "Frontend Repository",
+        },
+        {
+          uri: "file:///home/user/projects/backend",
+          name: "Backend Repository",
+        },
+      ]);
+
+      expect(onRootsChanged).toHaveBeenCalledTimes(1);
+      expect(onRootsChanged).toHaveBeenCalledWith({
+        roots: [
+          {
+            uri: "file:///home/user/projects/frontend",
+            name: "Frontend Repository",
+          },
+          {
+            uri: "file:///home/user/projects/backend",
+            name: "Backend Repository",
+          },
+        ],
+      });
     },
   });
 });

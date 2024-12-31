@@ -11,6 +11,7 @@ import {
   McpError,
   ReadResourceRequestSchema,
   Root,
+  RootsListChangedNotificationSchema,
   ServerCapabilities,
   SetLevelRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
@@ -31,6 +32,10 @@ export type SSEServer = {
 type FastMCPEvents = {
   connect: (event: { session: FastMCPSession }) => void;
   disconnect: (event: { session: FastMCPSession }) => void;
+};
+
+type FastMCPSessionEvents = {
+  rootsChanged: (event: { roots: Root[] }) => void;
 };
 
 /**
@@ -238,7 +243,13 @@ type LoggingLevel =
   | "alert"
   | "emergency";
 
-export class FastMCPSession {
+const FastMCPSessionEventEmitterBase: {
+  new (): StrictEventEmitter<EventEmitter, FastMCPSessionEvents>;
+} = EventEmitter;
+
+class FastMCPSessionEventEmitter extends FastMCPSessionEventEmitterBase {}
+
+export class FastMCPSession extends FastMCPSessionEventEmitter {
   #capabilities: ServerCapabilities = {};
   #loggingLevel: LoggingLevel = "info";
   #server: Server;
@@ -258,6 +269,8 @@ export class FastMCPSession {
     resources: Resource[];
     prompts: Prompt[];
   }) {
+    super();
+
     if (tools.length) {
       this.#capabilities.tools = {};
     }
@@ -279,6 +292,7 @@ export class FastMCPSession {
 
     this.setupErrorHandling();
     this.setupLoggingHandlers();
+    this.setupRootsHandlers();
 
     if (tools.length) {
       this.setupToolHandlers(tools);
@@ -349,6 +363,21 @@ export class FastMCPSession {
 
   public get loggingLevel(): LoggingLevel {
     return this.#loggingLevel;
+  }
+
+  private setupRootsHandlers() {
+    this.#server.setNotificationHandler(
+      RootsListChangedNotificationSchema,
+      () => {
+        this.#server.listRoots().then((roots) => {
+          this.#roots = roots.roots;
+
+          this.emit("rootsChanged", {
+            roots: roots.roots,
+          });
+        });
+      },
+    );
   }
 
   private setupLoggingHandlers() {
