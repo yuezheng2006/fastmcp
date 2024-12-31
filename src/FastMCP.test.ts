@@ -951,7 +951,7 @@ test("session sends pings to the client", async () => {
   });
 });
 
-test("prompt argument autocompletion", async () => {
+test("completes prompt arguments", async () => {
   await runWithTestServer({
     server: async () => {
       const server = new FastMCP({
@@ -1050,6 +1050,60 @@ test("adds automatic prompt argument completion when enum is provided", async ()
         completion: {
           values: ["Germany"],
           total: 1,
+        },
+      });
+    },
+  });
+});
+
+test("completes template resource arguments", async () => {
+  await runWithTestServer({
+    server: async () => {
+      const server = new FastMCP({
+        name: "Test",
+        version: "1.0.0",
+      });
+
+      server.addResourceTemplate({
+        uriTemplate: "issue:///{issueId}",
+        name: "Issue",
+        mimeType: "text/plain",
+        arguments: [
+          {
+            name: "issueId",
+            description: "ID of the issue",
+            complete: async (value) => {
+              if (value === "123") {
+                return {
+                  values: ["123456"],
+                };
+              }
+
+              return {
+                values: [],
+              };
+            },
+          },
+        ],
+      });
+
+      return server;
+    },
+    run: async ({ client }) => {
+      const response = await client.complete({
+        ref: {
+          type: "ref/resource",
+          uri: "issue:///{issueId}",
+        },
+        argument: {
+          name: "issueId",
+          value: "123",
+        },
+      });
+
+      expect(response).toEqual({
+        completion: {
+          values: ["123456"],
         },
       });
     },

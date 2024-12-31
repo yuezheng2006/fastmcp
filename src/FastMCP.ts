@@ -8,6 +8,7 @@ import {
   GetPromptRequestSchema,
   ListPromptsRequestSchema,
   ListResourcesRequestSchema,
+  ListResourceTemplatesRequestSchema,
   ListToolsRequestSchema,
   McpError,
   ReadResourceRequestSchema,
@@ -230,12 +231,46 @@ type ResourceResult =
       blob: string;
     };
 
+type InputResourceTemplateArgument = Readonly<{
+  name: string;
+  description?: string;
+  complete?: ArgumentValueCompleter;
+}>;
+
+type ResourceTemplateArgument = Readonly<{
+  name: string;
+  description?: string;
+  complete?: ArgumentValueCompleter;
+}>;
+
+type ResourceTemplate<
+  Arguments extends ResourceTemplateArgument[] = ResourceTemplateArgument[],
+> = {
+  uriTemplate: string;
+  name: string;
+  description?: string;
+  mimeType?: string;
+  arguments: Arguments;
+  complete?: (name: string, value: string) => Promise<Completion>;
+};
+
+type InputResourceTemplate<
+  Arguments extends ResourceTemplateArgument[] = ResourceTemplateArgument[],
+> = {
+  uriTemplate: string;
+  name: string;
+  description?: string;
+  mimeType?: string;
+  arguments: Arguments;
+};
+
 type Resource = {
   uri: string;
   name: string;
   description?: string;
   mimeType?: string;
   load: () => Promise<ResourceResult | ResourceResult[]>;
+  complete?: (name: string, value: string) => Promise<Completion>;
 };
 
 type ArgumentValueCompleter = (value: string) => Promise<Completion>;
@@ -309,23 +344,27 @@ class FastMCPSessionEventEmitter extends FastMCPSessionEventEmitterBase {}
 
 export class FastMCPSession extends FastMCPSessionEventEmitter {
   #capabilities: ServerCapabilities = {};
-  #loggingLevel: LoggingLevel = "info";
-  #server: Server;
   #clientCapabilities?: ClientCapabilities;
-  #roots: Root[] = [];
+  #loggingLevel: LoggingLevel = "info";
   #prompts: Prompt[] = [];
+  #resources: Resource[] = [];
+  #resourceTemplates: ResourceTemplate[] = [];
+  #roots: Root[] = [];
+  #server: Server;
 
   constructor({
     name,
     version,
     tools,
     resources,
+    resourcesTemplates,
     prompts,
   }: {
     name: string;
     version: string;
     tools: Tool[];
     resources: Resource[];
+    resourcesTemplates: InputResourceTemplate[];
     prompts: Prompt[];
   }) {
     super();
@@ -363,12 +402,53 @@ export class FastMCPSession extends FastMCPSessionEventEmitter {
     }
 
     if (resources.length) {
+      for (const resource of resources) {
+        this.addResource(resource);
+      }
+
       this.setupResourceHandlers(resources);
+    }
+
+    if (resourcesTemplates.length) {
+      for (const resourceTemplate of resourcesTemplates) {
+        this.addResourceTemplate(resourceTemplate);
+      }
+
+      this.setupResourceTemplateHandlers(resourcesTemplates);
     }
 
     if (prompts.length) {
       this.setupPromptHandlers(prompts);
     }
+  }
+
+  private addResource(inputResource: Resource) {
+    this.#resources.push(inputResource);
+  }
+
+  private addResourceTemplate(inputResourceTemplate: InputResourceTemplate) {
+    const completers: Record<string, ArgumentValueCompleter> = {};
+
+    for (const argument of inputResourceTemplate.arguments ?? []) {
+      if (argument.complete) {
+        completers[argument.name] = argument.complete;
+      }
+    }
+
+    const resourceTemplate = {
+      ...inputResourceTemplate,
+      complete: async (name: string, value: string) => {
+        if (completers[name]) {
+          return await completers[name](value);
+        }
+
+        return {
+          values: [],
+        };
+      },
+    };
+
+    this.#resourceTemplates.push(resourceTemplate);
   }
 
   private addPrompt(inputPrompt: InputPrompt) {
@@ -509,6 +589,42 @@ export class FastMCPSession extends FastMCPSessionEventEmitter {
 
         const completion = CompletionZodSchema.parse(
           await prompt.complete(
+            request.params.argument.name,
+            request.params.argument.value,
+          ),
+        );
+
+        return {
+          completion,
+        };
+      }
+
+      if (request.params.ref.type === "ref/resource") {
+        const resource = this.#resourceTemplates.find(
+          (resource) => resource.uriTemplate === request.params.ref.uri,
+        );
+
+        if (!resource) {
+          throw new UnexpectedStateError("Unknown resource", {
+            request,
+          });
+        }
+
+        if (!("uriTemplate" in resource)) {
+          throw new UnexpectedStateError("Unexpected resource");
+        }
+
+        if (!resource.complete) {
+          throw new UnexpectedStateError(
+            "Resource does not support completion",
+            {
+              request,
+            },
+          );
+        }
+
+        const completion = CompletionZodSchema.parse(
+          await resource.complete(
             request.params.argument.name,
             request.params.argument.value,
           ),
@@ -746,11 +862,27 @@ export class FastMCPSession extends FastMCPSessionEventEmitter {
           }
         }
 
-        if ("uriTemplate" in request.params) {
-          throw new UnexpectedStateError("Not implemented");
-        }
+        throw new UnexpectedStateError("Unknown resource request", {
+          request,
+        });
+      },
+    );
+  }
 
-        throw new UnexpectedStateError("Unknown resource request");
+  private setupResourceTemplateHandlers(resourceTemplates: ResourceTemplate[]) {
+    this.#capabilities.resources = {};
+
+    this.#server.setRequestHandler(
+      ListResourceTemplatesRequestSchema,
+      async () => {
+        return {
+          resourceTemplates: resourceTemplates.map((resourceTemplate) => {
+            return {
+              name: resourceTemplate.name,
+              uriTemplate: resourceTemplate.uriTemplate,
+            };
+          }),
+        };
       },
     );
   }
@@ -826,6 +958,7 @@ export class FastMCP extends FastMCPEventEmitter {
   #options: ServerOptions;
   #prompts: InputPrompt[] = [];
   #resources: Resource[] = [];
+  #resourcesTemplates: InputResourceTemplate[] = [];
   #sessions: FastMCPSession[] = [];
   #sseServer: SSEServer | null = null;
   #tools: Tool[] = [];
@@ -852,6 +985,15 @@ export class FastMCP extends FastMCPEventEmitter {
    */
   public addResource(resource: Resource) {
     this.#resources.push(resource);
+  }
+
+  /**
+   * Adds a resource template to the server.
+   */
+  public addResourceTemplate<
+    const Args extends InputResourceTemplateArgument[],
+  >(resource: InputResourceTemplate<Args>) {
+    this.#resourcesTemplates.push(resource);
   }
 
   /**
@@ -884,6 +1026,7 @@ export class FastMCP extends FastMCPEventEmitter {
         version: this.#options.version,
         tools: this.#tools,
         resources: this.#resources,
+        resourcesTemplates: this.#resourcesTemplates,
         prompts: this.#prompts,
       });
 
@@ -906,6 +1049,7 @@ export class FastMCP extends FastMCPEventEmitter {
             version: this.#options.version,
             tools: this.#tools,
             resources: this.#resources,
+            resourcesTemplates: this.#resourcesTemplates,
             prompts: this.#prompts,
           });
         },
