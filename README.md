@@ -363,7 +363,8 @@ server.addResource({
 });
 ```
 
-> [!NOTE] > `load` can return multiple resources. This could be used, for example, to return a list of files inside a directory when the directory is read.
+> [!NOTE]
+> `load` can return multiple resources. This could be used, for example, to return a list of files inside a directory when the directory is read.
 >
 > ```ts
 > async load() {
