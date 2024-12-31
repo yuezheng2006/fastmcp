@@ -600,3 +600,67 @@ test("uses events to notify server of client connect/disconnect", async () => {
 
   await server.stop();
 });
+
+test("handles multiple clients", async () => {
+  const port = await getRandomPort();
+
+  const server = new FastMCP({
+    name: "Test",
+    version: "1.0.0",
+  });
+
+  await server.start({
+    transportType: "sse",
+    sse: {
+      endpoint: "/sse",
+      port,
+    },
+  });
+
+  const client1 = new Client(
+    {
+      name: "example-client",
+      version: "1.0.0",
+    },
+    {
+      capabilities: {},
+    },
+  );
+
+  const transport1 = new SSEClientTransport(
+    new URL(`http://localhost:${port}/sse`),
+  );
+
+  await client1.connect(transport1);
+
+  const client2 = new Client(
+    {
+      name: "example-client",
+      version: "1.0.0",
+    },
+    {
+      capabilities: {},
+    },
+  );
+
+  const transport2 = new SSEClientTransport(
+    new URL(`http://localhost:${port}/sse`),
+  );
+
+  await client1.connect(transport2);
+
+  await delay(100);
+
+  expect(server.clients).toEqual([
+    {
+      type: "sse",
+      transport: expect.any(SSEServerTransport),
+    },
+    {
+      type: "sse",
+      transport: expect.any(SSEServerTransport),
+    },
+  ]);
+
+  await server.stop();
+});
