@@ -350,7 +350,7 @@ server.addTool({
 
 Each resource is identified by a unique URI and can contain either text or binary data.
 
-```js
+```ts
 server.addResource({
   uri: "file:///logs/app.log",
   name: "Application Logs",
@@ -363,14 +363,51 @@ server.addResource({
 });
 ```
 
+> [!NOTE] > `load` can return multiple resources. This could be used, for example, to return a list of files inside a directory when the directory is read.
+>
+> ```ts
+> async load() {
+>   return [
+>     {
+>       text: "First file content",
+>     },
+>     {
+>       text: "Second file content",
+>     },
+>   ];
+> }
+> ```
+
 You can also return binary contents in `load`:
 
-```js
+```ts
 async load() {
   return {
     blob: 'base64-encoded-data'
-  }
+  };
 }
+```
+
+You can also define resource templates:
+
+```ts
+server.addResourceTemplate({
+  uriTemplate: "file:///logs/{name}.log",
+  name: "Application Logs",
+  mimeType: "text/plain",
+  arguments: [
+    {
+      name: "name",
+      description: "Name of the log",
+      required: true,
+    },
+  ],
+  async load({ name }) {
+    return {
+      text: `Example log content for ${name}`,
+    };
+  },
+});
 ```
 
 ### Prompts

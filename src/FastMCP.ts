@@ -222,12 +222,20 @@ type Tool<Params extends ToolParameters = ToolParameters> = {
   ) => Promise<string | ContentResult | TextContent | ImageContent>;
 };
 
+type ResourceResult =
+  | {
+      text: string;
+    }
+  | {
+      blob: string;
+    };
+
 type Resource = {
   uri: string;
   name: string;
   description?: string;
   mimeType?: string;
-  load: () => Promise<{ text: string } | { blob: string }>;
+  load: () => Promise<ResourceResult | ResourceResult[]>;
 };
 
 type ArgumentValueCompleter = (value: string) => Promise<Completion>;
@@ -684,41 +692,65 @@ export class FastMCPSession extends FastMCPSessionEventEmitter {
     this.#server.setRequestHandler(
       ReadResourceRequestSchema,
       async (request) => {
-        const resource = resources.find(
-          (resource) => resource.uri === request.params.uri,
-        );
-
-        if (!resource) {
-          throw new McpError(
-            ErrorCode.MethodNotFound,
-            `Unknown resource: ${request.params.uri}`,
+        if ("uri" in request.params) {
+          const resource = resources.find(
+            (resource) =>
+              "uri" in resource && resource.uri === request.params.uri,
           );
+
+          if (!resource) {
+            throw new McpError(
+              ErrorCode.MethodNotFound,
+              `Unknown resource: ${request.params.uri}`,
+            );
+          }
+
+          if (!("uri" in resource)) {
+            throw new UnexpectedStateError("Resource does not support reading");
+          }
+
+          let maybeArrayResult: Awaited<ReturnType<Resource["load"]>>;
+
+          try {
+            maybeArrayResult = await resource.load();
+          } catch (error) {
+            throw new McpError(
+              ErrorCode.InternalError,
+              `Error reading resource: ${error}`,
+              {
+                uri: resource.uri,
+              },
+            );
+          }
+
+          if (Array.isArray(maybeArrayResult)) {
+            return {
+              contents: maybeArrayResult.map((result) => ({
+                uri: resource.uri,
+                mimeType: resource.mimeType,
+                name: resource.name,
+                ...result,
+              })),
+            };
+          } else {
+            return {
+              contents: [
+                {
+                  uri: resource.uri,
+                  mimeType: resource.mimeType,
+                  name: resource.name,
+                  ...maybeArrayResult,
+                },
+              ],
+            };
+          }
         }
 
-        let result: Awaited<ReturnType<Resource["load"]>>;
-
-        try {
-          result = await resource.load();
-        } catch (error) {
-          throw new McpError(
-            ErrorCode.InternalError,
-            `Error reading resource: ${error}`,
-            {
-              uri: resource.uri,
-            },
-          );
+        if ("uriTemplate" in request.params) {
+          throw new UnexpectedStateError("Not implemented");
         }
 
-        return {
-          contents: [
-            {
-              uri: resource.uri,
-              mimeType: resource.mimeType,
-              name: resource.name,
-              ...result,
-            },
-          ],
-        };
+        throw new UnexpectedStateError("Unknown resource request");
       },
     );
   }

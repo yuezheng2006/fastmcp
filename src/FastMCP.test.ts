@@ -546,6 +546,57 @@ test("clients reads a resource", async () => {
   });
 });
 
+test("clients reads a resource that returns multiple resources", async () => {
+  await runWithTestServer({
+    server: async () => {
+      const server = new FastMCP({
+        name: "Test",
+        version: "1.0.0",
+      });
+
+      server.addResource({
+        uri: "file:///logs/app.log",
+        name: "Application Logs",
+        mimeType: "text/plain",
+        async load() {
+          return [
+            {
+              text: "a",
+            },
+            {
+              text: "b",
+            },
+          ];
+        },
+      });
+
+      return server;
+    },
+    run: async ({ client }) => {
+      expect(
+        await client.readResource({
+          uri: "file:///logs/app.log",
+        }),
+      ).toEqual({
+        contents: [
+          {
+            uri: "file:///logs/app.log",
+            name: "Application Logs",
+            text: "a",
+            mimeType: "text/plain",
+          },
+          {
+            uri: "file:///logs/app.log",
+            name: "Application Logs",
+            text: "b",
+            mimeType: "text/plain",
+          },
+        ],
+      });
+    },
+  });
+});
+
 test("adds prompts", async () => {
   await runWithTestServer({
     server: async () => {
