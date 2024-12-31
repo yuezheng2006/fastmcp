@@ -532,6 +532,26 @@ test("adds prompts", async () => {
       return server;
     },
     run: async ({ client }) => {
+      expect(
+        await client.getPrompt({
+          name: "git-commit",
+          arguments: {
+            changes: "foo",
+          },
+        }),
+      ).toEqual({
+        description: "Generate a Git commit message",
+        messages: [
+          {
+            role: "user",
+            content: {
+              type: "text",
+              text: "Generate a concise but descriptive commit message for these changes:\n\nfoo",
+            },
+          },
+        ],
+      });
+
       expect(await client.listPrompts()).toEqual({
         prompts: [
           {
