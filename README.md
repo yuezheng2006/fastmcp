@@ -371,7 +371,7 @@ async load() {
 
 [Prompts](https://modelcontextprotocol.io/docs/concepts/prompts) enable servers to define reusable prompt templates and workflows that clients can easily surface to users and LLMs. They provide a powerful way to standardize and share common LLM interactions.
 
-```js
+```ts
 server.addPrompt({
   name: "git-commit",
   description: "Generate a Git commit message",
@@ -392,7 +392,7 @@ server.addPrompt({
 
 You can listen to events emitted by the server using the `on` method:
 
-```js
+```ts
 server.on("connect", (event) => {
   console.log("Client connected:", event.transport);
 });
@@ -400,6 +400,12 @@ server.on("connect", (event) => {
 server.on("disconnect", (event) => {
   console.log("Client disconnected:", event.transport);
 });
+```
+
+You can also get a list of all connected clients:
+
+```ts
+server.clients;
 ```
 
 ## Running Your Server

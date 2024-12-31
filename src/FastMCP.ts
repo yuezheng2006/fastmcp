@@ -20,6 +20,7 @@ import { startSSEServer, type SSEServer } from "mcp-proxy";
 import { StrictEventEmitter } from "strict-event-emitter-types";
 import { EventEmitter } from "events";
 import { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
+import { SSEServerTransport } from "@modelcontextprotocol/sdk/client/sse.js";
 
 type FastMCPEvents = {
   connect: (event: { transport: Transport }) => void;
@@ -231,15 +232,27 @@ type LoggingLevel =
   | "alert"
   | "emergency";
 
+type Client =
+  | {
+      type: "stdio";
+      transport: StdioServerTransport;
+    }
+  | {
+      type: "sse";
+      transport: SSEServerTransport;
+    };
+
 export class FastMCP extends (EventEmitter as {
   new (): StrictEventEmitter<EventEmitter, FastMCPEvents>;
 }) {
-  #tools: Tool[];
-  #resources: Resource[];
-  #prompts: Prompt[];
-  #server: Server | null = null;
-  #options: ServerOptions;
+  #clients: Client[] = [];
   #loggingLevel: LoggingLevel = "info";
+  #options: ServerOptions;
+  #prompts: Prompt[];
+  #resources: Resource[];
+  #server: Server | null = null;
+  #sseServer: SSEServer | null = null;
+  #tools: Tool[];
 
   constructor(public options: ServerOptions) {
     super();
@@ -288,6 +301,10 @@ export class FastMCP extends (EventEmitter as {
    */
   public get loggingLevel(): LoggingLevel {
     return this.#loggingLevel;
+  }
+
+  public get clients(): Client[] {
+    return this.#clients;
   }
 
   private setupToolHandlers(server: Server) {
@@ -553,8 +570,6 @@ export class FastMCP extends (EventEmitter as {
     this.#prompts.push(prompt);
   }
 
-  #sseServer: SSEServer | null = null;
-
   /**
    * Starts the server.
    */
@@ -596,6 +611,11 @@ export class FastMCP extends (EventEmitter as {
 
       await this.#server.connect(transport);
 
+      this.#clients.push({
+        type: "stdio",
+        transport,
+      });
+
       this.emit("connect", {
         transport,
       });
@@ -607,11 +627,20 @@ export class FastMCP extends (EventEmitter as {
         port: options.sse.port,
         server: this.#server,
         onClose: (transport) => {
+          this.#clients = this.#clients.filter(
+            (client) => client.transport !== transport,
+          );
+
           this.emit("disconnect", {
             transport,
           });
         },
         onConnect: (clientTransport) => {
+          this.#clients.push({
+            type: "sse",
+            transport: clientTransport,
+          });
+
           this.emit("connect", {
             transport: clientTransport,
           });

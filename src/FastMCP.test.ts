@@ -10,6 +10,7 @@ import {
   LoggingMessageNotificationSchema,
   McpError,
 } from "@modelcontextprotocol/sdk/types.js";
+import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 
 const runWithTestServer = async ({
   run,
@@ -582,6 +583,13 @@ test("uses events to notify server of client connect/disconnect", async () => {
 
   expect(onConnect).toHaveBeenCalledTimes(1);
   expect(onDisconnect).toHaveBeenCalledTimes(0);
+
+  expect(server.clients).toEqual([
+    {
+      type: "sse",
+      transport: expect.any(SSEServerTransport),
+    },
+  ]);
 
   await client.close();
 
