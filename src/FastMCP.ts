@@ -17,6 +17,14 @@ import { z } from "zod";
 import { readFile } from "fs/promises";
 import { fileTypeFromBuffer } from "file-type";
 import { startSSEServer, type SSEServer } from "mcp-proxy";
+import { StrictEventEmitter } from "strict-event-emitter-types";
+import { EventEmitter } from "events";
+import { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
+
+type FastMCPEvents = {
+  connect: (event: { transport: Transport }) => void;
+  disconnect: (event: { transport: Transport }) => void;
+};
 
 /**
  * Generates an image content object from a URL, file path, or buffer.
@@ -223,7 +231,9 @@ type LoggingLevel =
   | "alert"
   | "emergency";
 
-export class FastMCP {
+export class FastMCP extends (EventEmitter as {
+  new (): StrictEventEmitter<EventEmitter, FastMCPEvents>;
+}) {
   #tools: Tool[];
   #resources: Resource[];
   #prompts: Prompt[];
@@ -232,6 +242,8 @@ export class FastMCP {
   #loggingLevel: LoggingLevel = "info";
 
   constructor(public options: ServerOptions) {
+    super();
+
     this.#options = options;
     this.#tools = [];
     this.#resources = [];
@@ -590,6 +602,16 @@ export class FastMCP {
         endpoint: options.sse.endpoint as `/${string}`,
         port: options.sse.port,
         server: this.#server,
+        onClose: (transport) => {
+          this.emit("disconnect", {
+            transport,
+          });
+        },
+        onConnect: (clientTransport) => {
+          this.emit("connect", {
+            transport: clientTransport,
+          });
+        },
       });
     } else {
       throw new Error("Invalid transport type");

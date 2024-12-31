@@ -543,3 +543,56 @@ test("adds prompts", async () => {
     },
   });
 });
+
+test("uses events to notify server of client connect/disconnect", async () => {
+  const port = await getRandomPort();
+
+  const server = new FastMCP({
+    name: "Test",
+    version: "1.0.0",
+  });
+
+  const onConnect = vi.fn();
+  const onDisconnect = vi.fn();
+
+  server.on("connect", onConnect);
+  server.on("disconnect", onDisconnect);
+
+  await server.start({
+    transportType: "sse",
+    sse: {
+      endpoint: "/sse",
+      port,
+    },
+  });
+
+  const client = new Client(
+    {
+      name: "example-client",
+      version: "1.0.0",
+    },
+    {
+      capabilities: {},
+    },
+  );
+
+  const transport = new SSEClientTransport(
+    new URL(`http://localhost:${port}/sse`),
+  );
+
+  await client.connect(transport);
+
+  await delay(100);
+
+  expect(onConnect).toHaveBeenCalledTimes(1);
+  expect(onDisconnect).toHaveBeenCalledTimes(0);
+
+  await client.close();
+
+  await delay(100);
+
+  expect(onConnect).toHaveBeenCalledTimes(1);
+  expect(onDisconnect).toHaveBeenCalledTimes(1);
+
+  await server.stop();
+});

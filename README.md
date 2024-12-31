@@ -13,6 +13,7 @@ A TypeScript framework for building [MCP](https://modelcontextprotocol.io/) serv
 - [Error handling](#errors)
 - [SSE](#sse)
 - [Progress notifications](#progress)
+- [Typed events](#typed-events)
 - CLI for [testing](#test-with-mcp-cli) and [debugging](#inspect-with-mcp-inspector)
 
 ## Installation
@@ -384,6 +385,20 @@ server.addPrompt({
   load: async (args) => {
     return `Generate a concise but descriptive commit message for these changes:\n\n${args.changes}`;
   },
+});
+```
+
+### Typed events
+
+You can listen to events emitted by the server using the `on` method:
+
+```js
+server.on("connect", (event) => {
+  console.log("Client connected:", event.transport);
+});
+
+server.on("disconnect", (event) => {
+  console.log("Client disconnected:", event.transport);
 });
 ```
 
