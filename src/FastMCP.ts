@@ -336,15 +336,16 @@ export class FastMCPSession extends FastMCPSessionEventEmitter {
       await delay(100);
     }
 
+    if (!this.#clientCapabilities) {
+      throw new UnexpectedStateError("Server did not connect");
+    }
+
     if (this.#clientCapabilities?.roots) {
       const roots = await this.#server.listRoots();
 
       this.#roots = roots.roots;
     }
 
-    if (!this.#clientCapabilities) {
-      throw new UnexpectedStateError("Server did not connect");
-    }
   }
 
   public get roots(): Root[] {
