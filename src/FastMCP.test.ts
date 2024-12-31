@@ -7,6 +7,7 @@ import { getRandomPort } from "get-port-please";
 import { setTimeout as delay } from "timers/promises";
 import {
   ErrorCode,
+  ListRootsRequestSchema,
   LoggingMessageNotificationSchema,
   McpError,
 } from "@modelcontextprotocol/sdk/types.js";
@@ -704,6 +705,53 @@ test("session knows about client capabilities", async () => {
           listChanged: true,
         },
       });
+    },
+  });
+});
+
+test("session knows about roots", async () => {
+  const client = new Client(
+    {
+      name: "example-client",
+      version: "1.0.0",
+    },
+    {
+      capabilities: {
+        roots: {
+          listChanged: true,
+        },
+      },
+    },
+  );
+
+  client.setRequestHandler(ListRootsRequestSchema, () => {
+    return {
+      roots: [
+        {
+          uri: "file:///home/user/projects/frontend",
+          name: "Frontend Repository",
+        },
+      ],
+    };
+  });
+
+  await runWithTestServer({
+    client,
+    start: async () => {
+      const server = new FastMCP({
+        name: "Test",
+        version: "1.0.0",
+      });
+
+      return server;
+    },
+    run: async ({ session }) => {
+      expect(session.roots).toEqual([
+        {
+          uri: "file:///home/user/projects/frontend",
+          name: "Frontend Repository",
+        },
+      ]);
     },
   });
 });

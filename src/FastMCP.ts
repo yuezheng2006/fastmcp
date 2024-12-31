@@ -10,6 +10,7 @@ import {
   ListToolsRequestSchema,
   McpError,
   ReadResourceRequestSchema,
+  Root,
   ServerCapabilities,
   SetLevelRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
@@ -242,6 +243,7 @@ export class FastMCPSession {
   #loggingLevel: LoggingLevel = "info";
   #server: Server;
   #clientCapabilities?: ClientCapabilities;
+  #roots: Root[] = [];
 
   constructor({
     name,
@@ -320,9 +322,19 @@ export class FastMCPSession {
       await delay(100);
     }
 
+    if (this.#clientCapabilities?.roots) {
+      const roots = await this.#server.listRoots();
+
+      this.#roots = roots.roots;
+    }
+
     if (!this.#clientCapabilities) {
       throw new UnexpectedStateError("Server did not connect");
     }
+  }
+
+  public get roots(): Root[] {
+    return this.#roots;
   }
 
   public async close() {

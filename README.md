@@ -15,6 +15,7 @@ A TypeScript framework for building [MCP](https://modelcontextprotocol.io/) serv
 - [SSE](#sse)
 - [Progress notifications](#progress)
 - [Typed events](#typed-events)
+- Roots
 - CLI for [testing](#test-with-mcp-cli) and [debugging](#inspect-with-mcp-inspector)
 
 ## Installation
@@ -435,6 +436,14 @@ The `loggingLevel` property describes the logging level as set by the client.
 
 ```ts
 session.loggingLevel;
+```
+
+### `roots`
+
+The `roots` property contains the roots as set by the client.
+
+```ts
+session.roots;
 ```
 
 ### `server`
