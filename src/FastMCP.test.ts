@@ -4,16 +4,12 @@ import { test, expect, vi } from "vitest";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
 import { getRandomPort } from "get-port-please";
-import { EventSource } from "eventsource";
 import { setTimeout as delay } from "timers/promises";
 import {
   ErrorCode,
   LoggingMessageNotificationSchema,
   McpError,
 } from "@modelcontextprotocol/sdk/types.js";
-
-// @ts-expect-error - figure out how to use --experimental-eventsource with vitest
-global.EventSource = EventSource;
 
 const runWithTestServer = async ({
   run,
