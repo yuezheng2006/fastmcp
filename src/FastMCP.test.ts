@@ -1085,6 +1085,11 @@ test("completes template resource arguments", async () => {
             },
           },
         ],
+        load: async ({ issueId }) => {
+          return {
+            text: `Issue ${issueId}`,
+          };
+        },
       });
 
       return server;
@@ -1129,6 +1134,11 @@ test("lists resource templates", async () => {
             required: true,
           },
         ],
+        load: async ({ name }) => {
+          return {
+            text: `Example log content for ${name}`,
+          };
+        },
       });
 
       return server;
@@ -1141,6 +1151,60 @@ test("lists resource templates", async () => {
             uriTemplate: "file:///logs/{name}.log",
           },
         ],
+      });
+    },
+  });
+});
+
+test("clients reads a resource accessed via a resource template", async () => {
+  const loadSpy = vi.fn((_args) => {
+    return {
+      text: "Example log content",
+    };
+  });
+
+  await runWithTestServer({
+    server: async () => {
+      const server = new FastMCP({
+        name: "Test",
+        version: "1.0.0",
+      });
+
+      server.addResourceTemplate({
+        uriTemplate: "file:///logs/{name}.log",
+        name: "Application Logs",
+        mimeType: "text/plain",
+        arguments: [
+          {
+            name: "name",
+            description: "Name of the log",
+          },
+        ],
+        async load(args) {
+          return loadSpy(args);
+        },
+      });
+
+      return server;
+    },
+    run: async ({ client }) => {
+      expect(
+        await client.readResource({
+          uri: "file:///logs/app.log",
+        }),
+      ).toEqual({
+        contents: [
+          {
+            uri: "file:///logs/app.log",
+            name: "Application Logs",
+            text: "Example log content",
+            mimeType: "text/plain",
+          },
+        ],
+      });
+
+      expect(loadSpy).toHaveBeenCalledWith({
+        name: "app",
       });
     },
   });

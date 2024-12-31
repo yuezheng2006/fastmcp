@@ -27,6 +27,7 @@ import { EventEmitter } from "events";
 import Fuse from "fuse.js";
 import { startSSEServer } from "mcp-proxy";
 import { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
+import parseURITemplate from "uri-templates";
 
 export type SSEServer = {
   close: () => Promise<void>;
@@ -252,6 +253,13 @@ type ResourceTemplate<
   mimeType?: string;
   arguments: Arguments;
   complete?: (name: string, value: string) => Promise<Completion>;
+  load: (
+    args: ResourceTemplateArgumentsToObject<Arguments>,
+  ) => Promise<ResourceResult>;
+};
+
+type ResourceTemplateArgumentsToObject<T extends { name: string }[]> = {
+  [K in T[number]["name"]]: string;
 };
 
 type InputResourceTemplate<
@@ -262,6 +270,9 @@ type InputResourceTemplate<
   description?: string;
   mimeType?: string;
   arguments: Arguments;
+  load: (
+    args: ResourceTemplateArgumentsToObject<Arguments>,
+  ) => Promise<ResourceResult>;
 };
 
 type Resource = {
@@ -283,18 +294,19 @@ type InputPromptArgument = Readonly<{
   enum?: string[];
 }>;
 
-type ArgumentsToObject<T extends InputPromptArgument[]> = {
-  [K in T[number]["name"]]: Extract<
-    T[number],
-    { name: K }
-  >["required"] extends true
-    ? string
-    : string | undefined;
-};
+type PromptArgumentsToObject<T extends { name: string; required?: boolean }[]> =
+  {
+    [K in T[number]["name"]]: Extract<
+      T[number],
+      { name: K }
+    >["required"] extends true
+      ? string
+      : string | undefined;
+  };
 
 type InputPrompt<
   Arguments extends InputPromptArgument[] = InputPromptArgument[],
-  Args = ArgumentsToObject<Arguments>,
+  Args = PromptArgumentsToObject<Arguments>,
 > = {
   name: string;
   description?: string;
@@ -312,7 +324,7 @@ type PromptArgument = Readonly<{
 
 type Prompt<
   Arguments extends PromptArgument[] = PromptArgument[],
-  Args = ArgumentsToObject<Arguments>,
+  Args = PromptArgumentsToObject<Arguments>,
 > = {
   arguments?: PromptArgument[];
   complete?: (name: string, value: string) => Promise<Completion>;
@@ -373,7 +385,7 @@ export class FastMCPSession extends FastMCPSessionEventEmitter {
       this.#capabilities.tools = {};
     }
 
-    if (resources.length) {
+    if (resources.length || resourcesTemplates.length) {
       this.#capabilities.resources = {};
     }
 
@@ -401,20 +413,20 @@ export class FastMCPSession extends FastMCPSessionEventEmitter {
       this.setupToolHandlers(tools);
     }
 
-    if (resources.length) {
+    if (resources.length || resourcesTemplates.length) {
       for (const resource of resources) {
         this.addResource(resource);
       }
 
       this.setupResourceHandlers(resources);
-    }
 
-    if (resourcesTemplates.length) {
-      for (const resourceTemplate of resourcesTemplates) {
-        this.addResourceTemplate(resourceTemplate);
+      if (resourcesTemplates.length) {
+        for (const resourceTemplate of resourcesTemplates) {
+          this.addResourceTemplate(resourceTemplate);
+        }
+
+        this.setupResourceTemplateHandlers(resourcesTemplates);
       }
-
-      this.setupResourceTemplateHandlers(resourcesTemplates);
     }
 
     if (prompts.length) {
@@ -815,6 +827,33 @@ export class FastMCPSession extends FastMCPSessionEventEmitter {
           );
 
           if (!resource) {
+            for (const resourceTemplate of this.#resourceTemplates) {
+              const uriTemplate = parseURITemplate(
+                resourceTemplate.uriTemplate,
+              );
+
+              const match = uriTemplate.fromUri(request.params.uri);
+
+              if (!match) {
+                continue;
+              }
+
+              const uri = uriTemplate.fill(match);
+
+              const result = await resourceTemplate.load(match);
+
+              return {
+                contents: [
+                  {
+                    uri: uri,
+                    mimeType: resourceTemplate.mimeType,
+                    name: resourceTemplate.name,
+                    ...result,
+                  },
+                ],
+              };
+            }
+
             throw new McpError(
               ErrorCode.MethodNotFound,
               `Unknown resource: ${request.params.uri}`,
@@ -870,8 +909,6 @@ export class FastMCPSession extends FastMCPSessionEventEmitter {
   }
 
   private setupResourceTemplateHandlers(resourceTemplates: ResourceTemplate[]) {
-    this.#capabilities.resources = {};
-
     this.#server.setRequestHandler(
       ListResourceTemplatesRequestSchema,
       async () => {
