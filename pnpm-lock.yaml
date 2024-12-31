@@ -17,8 +17,8 @@ importers:
         specifier: ^19.6.0
         version: 19.6.0
       mcp-proxy:
-        specifier: ^1.3.0
-        version: 1.3.0
+        specifier: ^2.0.0
+        version: 2.0.0
       strict-event-emitter-types:
         specifier: ^2.0.0
         version: 2.0.0
@@ -1862,10 +1862,10 @@ packages:
         integrity: sha512-DCXu6Ifhqcks7TZKY3Hxp3y6qphY5SJZmrWMDrKcERSOXWQdMhU9Ig/PYrzyw/ul9jOIyh0N4M0tbC5hodg8dw==,
       }
 
-  fastmcp@1.6.0:
+  fastmcp@1.6.1:
     resolution:
       {
-        integrity: sha512-kNY+fE+YyjdMMzNSLm8/966dMzh+AfngrEkbbCsme9Vhy6v1Y2MvLpR8qnaUjwqLeP9MymSxlsfXO5b24vbi9w==,
+        integrity: sha512-4wTZDgSxxsnE0hhbSQbqXdrFizKMtabqs5TLMH0NLqMRCEtwtVM7VQso2aL9qpgezqktxz7aGHOSZJmjS7yKAw==,
       }
     hasBin: true
 
@@ -2562,10 +2562,17 @@ packages:
     engines: { node: ">= 18" }
     hasBin: true
 
-  mcp-proxy@1.3.0:
+  mcp-proxy@1.3.1:
     resolution:
       {
-        integrity: sha512-m+DUbc17y8Tb9QOS645lFxblJzDZwzmn9RA9VOdjQd0Pf1NqIy4ZQxj9i9m2CsZBdztWtjUOQwTfyMxRcC+zGg==,
+        integrity: sha512-MCZMz7PCa77dex+/fj+nut3bVARXJemIz7Zx98tjrfxFyVRz1/E9Sq8xaRQMLqHrH91WkIn9BlBslrkUXb2x6A==,
+      }
+    hasBin: true
+
+  mcp-proxy@2.0.0:
+    resolution:
+      {
+        integrity: sha512-dKRRWwbpzhdMYu954ybU/JgJYqFCc13735ghcHu5rlB8IesDk84CNYtlkk1M31yfbyvo6gwaD8VzhzSOtWokKw==,
       }
     hasBin: true
 
@@ -5025,12 +5032,12 @@ snapshots:
 
   fast-levenshtein@2.0.6: {}
 
-  fastmcp@1.6.0:
+  fastmcp@1.6.1:
     dependencies:
       "@modelcontextprotocol/sdk": 1.0.4
       execa: 9.5.2
       file-type: 19.6.0
-      mcp-proxy: 1.3.0
+      mcp-proxy: 1.3.1
       yargs: 17.7.2
       zod: 3.24.1
       zod-to-json-schema: 3.24.1(zod@3.24.1)
@@ -5396,11 +5403,18 @@ snapshots:
 
   marked@12.0.2: {}
 
-  mcp-proxy@1.3.0:
+  mcp-proxy@1.3.1:
     dependencies:
       "@modelcontextprotocol/sdk": 1.0.4
       eventsource: 3.0.2
-      fastmcp: 1.6.0
+      fastmcp: 1.6.1
+      yargs: 17.7.2
+
+  mcp-proxy@2.0.0:
+    dependencies:
+      "@modelcontextprotocol/sdk": 1.0.4
+      eventsource: 3.0.2
+      fastmcp: 1.6.1
       yargs: 17.7.2
 
   meow@13.2.0: {}

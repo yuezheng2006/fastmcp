@@ -16,15 +16,17 @@ import { zodToJsonSchema } from "zod-to-json-schema";
 import { z } from "zod";
 import { readFile } from "fs/promises";
 import { fileTypeFromBuffer } from "file-type";
-import { startSSEServer, type SSEServer } from "mcp-proxy";
 import { StrictEventEmitter } from "strict-event-emitter-types";
 import { EventEmitter } from "events";
-import { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
-import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
+import { startSSEServer } from "mcp-proxy";
+
+export type SSEServer = {
+  close: () => Promise<void>;
+};
 
 type FastMCPEvents = {
-  connect: (event: { transport: Transport }) => void;
-  disconnect: (event: { transport: Transport }) => void;
+  connect: (event: { server: Server }) => void;
+  disconnect: (event: { server: Server }) => void;
 };
 
 /**
@@ -235,11 +237,11 @@ type LoggingLevel =
 type Client =
   | {
       type: "stdio";
-      transport: StdioServerTransport;
+      server: Server;
     }
   | {
       type: "sse";
-      transport: SSEServerTransport;
+      server: Server;
     };
 
 export class FastMCP extends (EventEmitter as {
@@ -250,7 +252,6 @@ export class FastMCP extends (EventEmitter as {
   #options: ServerOptions;
   #prompts: Prompt[];
   #resources: Resource[];
-  #server: Server | null = null;
   #sseServer: SSEServer | null = null;
   #tools: Tool[];
 
@@ -599,25 +600,25 @@ export class FastMCP extends (EventEmitter as {
 
     capabilities.logging = {};
 
-    this.#server = new Server(
-      { name: this.#options.name, version: this.#options.version },
-      { capabilities },
-    );
-
-    this.setupHandlers(this.#server);
-
     if (options.transportType === "stdio") {
       const transport = new StdioServerTransport();
 
-      await this.#server.connect(transport);
+      const server = new Server(
+        { name: this.#options.name, version: this.#options.version },
+        { capabilities },
+      );
+
+      this.setupHandlers(server);
+
+      await server.connect(transport);
 
       this.#clients.push({
         type: "stdio",
-        transport,
+        server,
       });
 
       this.emit("connect", {
-        transport,
+        server,
       });
 
       console.error(`server is running on stdio`);
@@ -625,27 +626,38 @@ export class FastMCP extends (EventEmitter as {
       this.#sseServer = await startSSEServer({
         endpoint: options.sse.endpoint as `/${string}`,
         port: options.sse.port,
-        server: this.#server,
-        onClose: (transport) => {
+        createServer: async () => {
+          const server = new Server(
+            { name: this.#options.name, version: this.#options.version },
+            { capabilities },
+          );
+
+          this.setupHandlers(server);
+
+          return server;
+        },
+        onClose: (server) => {
           this.#clients = this.#clients.filter(
-            (client) => client.transport !== transport,
+            (client) => client.server !== server,
           );
 
           this.emit("disconnect", {
-            transport,
+            server,
           });
         },
-        onConnect: (clientTransport) => {
+        onConnect: async (server) => {
           this.#clients.push({
             type: "sse",
-            transport: clientTransport,
+            server: server,
           });
 
           this.emit("connect", {
-            transport: clientTransport,
+            server: server,
           });
         },
       });
+
+      console.error(`server is running on SSE at http://localhost:${options.sse.port}${options.sse.endpoint}`);
     } else {
       throw new Error("Invalid transport type");
     }

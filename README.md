@@ -394,13 +394,17 @@ You can listen to events emitted by the server using the `on` method:
 
 ```ts
 server.on("connect", (event) => {
-  console.log("Client connected:", event.transport);
+  console.log("Client connected:", event.server);
 });
 
 server.on("disconnect", (event) => {
-  console.log("Client disconnected:", event.transport);
+  console.log("Client disconnected:", event.server);
 });
 ```
+
+> [!NOTE]
+> The `server` object is a [MCP Server](https://modelcontextprotocol.io/docs/concepts/server) instance.
+> We allocate a new server instance for each client connection to enable 1:1 communication between a client and the server.
 
 You can also get a list of all connected clients:
 
