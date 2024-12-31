@@ -1109,3 +1109,39 @@ test("completes template resource arguments", async () => {
     },
   });
 });
+
+test("lists resource templates", async () => {
+  await runWithTestServer({
+    server: async () => {
+      const server = new FastMCP({
+        name: "Test",
+        version: "1.0.0",
+      });
+
+      server.addResourceTemplate({
+        uriTemplate: "file:///logs/{name}.log",
+        name: "Application Logs",
+        mimeType: "text/plain",
+        arguments: [
+          {
+            name: "name",
+            description: "Name of the log",
+            required: true,
+          },
+        ],
+      });
+
+      return server;
+    },
+    run: async ({ client }) => {
+      expect(await client.listResourceTemplates()).toEqual({
+        resourceTemplates: [
+          {
+            name: "Application Logs",
+            uriTemplate: "file:///logs/{name}.log",
+          },
+        ],
+      });
+    },
+  });
+});

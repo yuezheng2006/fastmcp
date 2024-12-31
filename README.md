@@ -3,6 +3,7 @@
 A TypeScript framework for building [MCP](https://modelcontextprotocol.io/) servers capable of handling client sessions.
 
 > [!NOTE]
+>
 > For a Python implementation, see [FastMCP](https://github.com/jlowin/fastmcp).
 
 ## Features
@@ -364,6 +365,7 @@ server.addResource({
 ```
 
 > [!NOTE]
+>
 > `load` can return multiple resources. This could be used, for example, to return a list of files inside a directory when the directory is read.
 >
 > ```ts
@@ -586,6 +588,7 @@ npx fastmcp inspect server.ts
 ## Showcase
 
 > [!NOTE]
+>
 > If you've developed a server using FastMCP, please [submit a PR](https://github.com/punkpeye/fastmcp) to showcase it here!
 
 - https://github.com/apinetwork/piapi-mcp-server
