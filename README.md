@@ -51,7 +51,7 @@ server.start({
 });
 ```
 
-*That's it! You have a working MCP server.*
+*That's it!* You have a working MCP server.
 
 You can test the server in terminal with:
 
