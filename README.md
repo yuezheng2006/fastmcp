@@ -391,6 +391,8 @@ async load() {
 }
 ```
 
+### Resource templates
+
 You can also define resource templates:
 
 ```ts
@@ -403,6 +405,41 @@ server.addResourceTemplate({
       name: "name",
       description: "Name of the log",
       required: true,
+    },
+  ],
+  async load({ name }) {
+    return {
+      text: `Example log content for ${name}`,
+    };
+  },
+});
+```
+
+#### Resource template argument auto-completion
+
+Provide `complete` functions for resource template arguments to enable automatic completion:
+
+```ts
+server.addResourceTemplate({
+  uriTemplate: "file:///logs/{name}.log",
+  name: "Application Logs",
+  mimeType: "text/plain",
+  arguments: [
+    {
+      name: "name",
+      description: "Name of the log",
+      required: true,
+      complete: async (value) => {
+        if (value === "Example") {
+          return {
+            values: ["Example Log"],
+          };
+        }
+
+        return {
+          values: [],
+        };
+      },
     },
   ],
   async load({ name }) {
@@ -466,7 +503,7 @@ server.addPrompt({
 });
 ```
 
-#### Automatic prompt argument completion
+#### Prompt argument auto-completion using `enum`
 
 If you provide an `enum` array for an argument, the server will automatically provide completions for the argument.
 
