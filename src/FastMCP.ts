@@ -596,6 +596,10 @@ export class FastMCP extends (EventEmitter as {
 
       await this.#server.connect(transport);
 
+      this.emit("connect", {
+        transport,
+      });
+
       console.error(`server is running on stdio`);
     } else if (options.transportType === "sse") {
       this.#sseServer = await startSSEServer({
