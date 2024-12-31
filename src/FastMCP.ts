@@ -20,7 +20,7 @@ import { startSSEServer, type SSEServer } from "mcp-proxy";
 import { StrictEventEmitter } from "strict-event-emitter-types";
 import { EventEmitter } from "events";
 import { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
-import { SSEServerTransport } from "@modelcontextprotocol/sdk/client/sse.js";
+import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 
 type FastMCPEvents = {
   connect: (event: { transport: Transport }) => void;
