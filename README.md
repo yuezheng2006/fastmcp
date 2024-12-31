@@ -15,6 +15,7 @@ A TypeScript framework for building [MCP](https://modelcontextprotocol.io/) serv
 - [SSE](#sse)
 - [Progress notifications](#progress)
 - [Typed server events](#typed-server-events)
+- [Prompt argument auto-completion](#prompt-argument-auto-completion)
 - Automated SSE pings
 - Roots
 - CLI for [testing](#test-with-mcp-cli) and [debugging](#inspect-with-mcp-inspector)
@@ -389,6 +390,38 @@ server.addPrompt({
   ],
   load: async (args) => {
     return `Generate a concise but descriptive commit message for these changes:\n\n${args.changes}`;
+  },
+});
+```
+
+#### Prompt argument auto-completion
+
+Prompts can provide auto-completion for their arguments:
+
+```js
+server.addPrompt({
+  name: "countryPoem",
+  description: "Writes a poem about a country",
+  load: async ({ name }) => {
+    return `Hello, ${name}!`;
+  },
+  arguments: [
+    {
+      name: "name",
+      description: "Name of the country",
+      required: true,
+    },
+  ],
+  complete: async (name, value) => {
+    if (value === "Germ") {
+      return {
+        values: ["Germany"],
+      };
+    }
+
+    return {
+      values: [],
+    };
   },
 });
 ```

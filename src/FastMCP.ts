@@ -3,6 +3,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import {
   CallToolRequestSchema,
   ClientCapabilities,
+  CompleteRequestSchema,
   ErrorCode,
   GetPromptRequestSchema,
   ListPromptsRequestSchema,
@@ -87,7 +88,7 @@ type Extra = unknown;
 
 type Extras = Record<string, Extra>;
 
-class UnexpectedStateError extends FastMCPError {
+export class UnexpectedStateError extends FastMCPError {
   public extras?: Extras;
 
   public constructor(message: string, extras?: Extras) {
@@ -186,6 +187,26 @@ const ContentResultZodSchema = z
   })
   .strict() satisfies z.ZodType<ContentResult>;
 
+/**
+ * https://github.com/modelcontextprotocol/typescript-sdk/blob/3164da64d085ec4e022ae881329eee7b72f208d4/src/types.ts#L983-L1003
+ */
+const CompletionZodSchema = z.object({
+  /**
+   * An array of completion values. Must not exceed 100 items.
+   */
+  values: z.array(z.string()).max(100),
+  /**
+   * The total number of completion options available. This can exceed the number of values actually sent in the response.
+   */
+  total: z.optional(z.number().int()),
+  /**
+   * Indicates whether there are additional completion options beyond those provided in the current response, even if the exact total is unknown.
+   */
+  hasMore: z.optional(z.boolean()),
+});
+
+type Completion = z.infer<typeof CompletionZodSchema>;
+
 type Tool<Params extends ToolParameters = ToolParameters> = {
   name: string;
   description?: string;
@@ -208,6 +229,7 @@ type PromptArgument = Readonly<{
   name: string;
   description?: string;
   required?: boolean;
+  complete?: (name: string, value: string) => Promise<Completion>;
 }>;
 
 type ArgumentsToObject<T extends PromptArgument[]> = {
@@ -227,6 +249,10 @@ type Prompt<
   description?: string;
   arguments?: Arguments;
   load: (args: Args) => Promise<string>;
+  complete?: (
+    name: Arguments[number]["name"],
+    value: string,
+  ) => Promise<Completion>;
 };
 
 type ServerOptions = {
@@ -256,6 +282,7 @@ export class FastMCPSession extends FastMCPSessionEventEmitter {
   #server: Server;
   #clientCapabilities?: ClientCapabilities;
   #roots: Root[] = [];
+  #prompts: Prompt[] = [];
 
   constructor({
     name,
@@ -281,6 +308,7 @@ export class FastMCPSession extends FastMCPSessionEventEmitter {
     }
 
     if (prompts.length) {
+      this.#prompts = prompts;
       this.#capabilities.prompts = {};
     }
 
@@ -294,6 +322,7 @@ export class FastMCPSession extends FastMCPSessionEventEmitter {
     this.setupErrorHandling();
     this.setupLoggingHandlers();
     this.setupRootsHandlers();
+    this.setupCompleteHandlers();
 
     if (tools.length) {
       this.setupToolHandlers(tools);
@@ -380,6 +409,43 @@ export class FastMCPSession extends FastMCPSessionEventEmitter {
 
   public get loggingLevel(): LoggingLevel {
     return this.#loggingLevel;
+  }
+
+  private setupCompleteHandlers() {
+    this.#server.setRequestHandler(CompleteRequestSchema, async (request) => {
+      if (request.params.ref.type === "ref/prompt") {
+        const prompt = this.#prompts.find(
+          (prompt) => prompt.name === request.params.ref.name,
+        );
+
+        if (!prompt) {
+          throw new UnexpectedStateError("Unknown prompt", {
+            request,
+          });
+        }
+
+        if (!prompt.complete) {
+          throw new UnexpectedStateError("Prompt does not support completion", {
+            request,
+          });
+        }
+
+        const completion = CompletionZodSchema.parse(
+          await prompt.complete(
+            request.params.argument.name,
+            request.params.argument.value,
+          ),
+        );
+
+        return {
+          completion,
+        };
+      }
+
+      throw new UnexpectedStateError("Unexpected completion request", {
+        request,
+      });
+    });
   }
 
   private setupRootsHandlers() {
@@ -595,6 +661,7 @@ export class FastMCPSession extends FastMCPSessionEventEmitter {
             name: prompt.name,
             description: prompt.description,
             arguments: prompt.arguments,
+            complete: prompt.complete,
           };
         }),
       };

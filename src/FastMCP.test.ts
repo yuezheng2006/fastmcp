@@ -859,3 +859,71 @@ test("session sends pings to the client", async () => {
     },
   });
 });
+
+test("prompt argument autocompletion", async () => {
+  await runWithTestServer({
+    server: async () => {
+      const server = new FastMCP({
+        name: "Test",
+        version: "1.0.0",
+      });
+
+      server.addPrompt({
+        name: "countryPoem",
+        description: "Writes a poem about a country",
+        load: async ({ name }) => {
+          return `Hello, ${name}!`;
+        },
+        arguments: [
+          {
+            name: "name",
+            description: "Name of the country",
+            required: true,
+          },
+        ],
+        complete: async (name, value) => {
+          if (value === "Germ") {
+            return {
+              values: ["Germany"],
+            };
+          }
+
+          return {
+            values: [],
+          };
+        },
+      });
+
+      return server;
+    },
+    client: async () => {
+      return new Client(
+        {
+          name: "example-client",
+          version: "1.0.0",
+        },
+        {
+          capabilities: {},
+        },
+      );
+    },
+    run: async ({ client }) => {
+      const response = await client.complete({
+        ref: {
+          type: "ref/prompt",
+          name: "countryPoem",
+        },
+        argument: {
+          name: "name",
+          value: "Germ",
+        },
+      });
+
+      expect(response).toEqual({
+        completion: {
+          values: ["Germany"],
+        },
+      });
+    },
+  });
+});
