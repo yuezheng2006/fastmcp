@@ -19,14 +19,15 @@ import { fileTypeFromBuffer } from "file-type";
 import { StrictEventEmitter } from "strict-event-emitter-types";
 import { EventEmitter } from "events";
 import { startSSEServer } from "mcp-proxy";
+import { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 
 export type SSEServer = {
   close: () => Promise<void>;
 };
 
 type FastMCPEvents = {
-  connect: (event: { server: Server }) => void;
-  disconnect: (event: { server: Server }) => void;
+  connect: (event: { session: FastMCPSession }) => void;
+  disconnect: (event: { session: FastMCPSession }) => void;
 };
 
 /**
@@ -234,84 +235,89 @@ type LoggingLevel =
   | "alert"
   | "emergency";
 
-type Client =
-  | {
-      type: "stdio";
-      server: Server;
-    }
-  | {
-      type: "sse";
-      server: Server;
-    };
-
-export class FastMCP extends (EventEmitter as {
-  new (): StrictEventEmitter<EventEmitter, FastMCPEvents>;
-}) {
-  #clients: Client[] = [];
+export class FastMCPSession {
+  #capabilities: ServerCapabilities = {};
   #loggingLevel: LoggingLevel = "info";
-  #options: ServerOptions;
-  #prompts: Prompt[];
-  #resources: Resource[];
-  #sseServer: SSEServer | null = null;
-  #tools: Tool[];
+  #server: Server;
 
-  constructor(public options: ServerOptions) {
-    super();
+  constructor({
+    name,
+    version,
+    tools,
+    resources,
+    prompts,
+  }: {
+    name: string;
+    version: string;
+    tools: Tool[];
+    resources: Resource[];
+    prompts: Prompt[];
+  }) {
+    if (tools.length) {
+      this.#capabilities.tools = {};
+    }
 
-    this.#options = options;
-    this.#tools = [];
-    this.#resources = [];
-    this.#prompts = [];
+    if (resources.length) {
+      this.#capabilities.resources = {};
+    }
+
+    if (prompts.length) {
+      this.#capabilities.prompts = {};
+    }
+
+    this.#capabilities.logging = {};
+
+    this.#server = new Server(
+      { name: name, version: version },
+      { capabilities: this.#capabilities },
+    );
+
+    this.setupErrorHandling();
+    this.setupLoggingHandlers();
+
+    if (tools.length) {
+      this.setupToolHandlers(tools);
+    }
+
+    if (resources.length) {
+      this.setupResourceHandlers(resources);
+    }
+
+    if (prompts.length) {
+      this.setupPromptHandlers(prompts);
+    }
   }
 
-  private setupHandlers(server: Server) {
-    this.setupErrorHandling(server);
+  public get server(): Server {
+    return this.#server;
+  }
 
-    if (this.#tools.length) {
-      this.setupToolHandlers(server);
-    }
+  public connect(transport: Transport) {
+    this.#server.connect(transport);
+  }
 
-    if (this.#resources.length) {
-      this.setupResourceHandlers(server);
-    }
+  private setupErrorHandling() {
+    this.#server.onerror = (error) => {
+      console.error("[MCP Error]", error);
+    };
+  }
 
-    if (this.#prompts.length) {
-      this.setupPromptHandlers(server);
-    }
+  public get loggingLevel(): LoggingLevel {
+    return this.#loggingLevel;
+  }
 
-    server.setRequestHandler(SetLevelRequestSchema, (request) => {
+  private setupLoggingHandlers() {
+    this.#server.setRequestHandler(SetLevelRequestSchema, (request) => {
       this.#loggingLevel = request.params.level;
 
       return {};
     });
   }
 
-  private setupErrorHandling(server: Server) {
-    server.onerror = (error) => {
-      console.error("[MCP Error]", error);
-    };
-
-    process.on("SIGINT", async () => {
-      await server.close();
-      process.exit(0);
-    });
-  }
-
-  /**
-   * Returns the current logging level.
-   */
-  public get loggingLevel(): LoggingLevel {
-    return this.#loggingLevel;
-  }
-
-  public get clients(): Client[] {
-    return this.#clients;
-  }
-
-  private setupToolHandlers(server: Server) {
-    server.setRequestHandler(ListToolsRequestSchema, async () => {
+  private setupToolHandlers(tools: Tool[]) {
+    this.#server.setRequestHandler(ListToolsRequestSchema, async () => {
       return {
-        tools: this.#tools.map((tool) => {
+        tools: tools.map((tool) => {
           return {
             name: tool.name,
             description: tool.description,
@@ -323,10 +329,8 @@ export class FastMCP extends (EventEmitter as {
       };
     });
 
-    server.setRequestHandler(CallToolRequestSchema, async (request) => {
-      const tool = this.#tools.find(
-        (tool) => tool.name === request.params.name,
-      );
+    this.#server.setRequestHandler(CallToolRequestSchema, async (request) => {
+      const tool = tools.find((tool) => tool.name === request.params.name);
 
       if (!tool) {
         throw new McpError(
@@ -356,7 +360,7 @@ export class FastMCP extends (EventEmitter as {
 
       try {
         const reportProgress = async (progress: Progress) => {
-          await server.notification({
+          await this.#server.notification({
             method: "notifications/progress",
             params: {
               ...progress,
@@ -367,7 +371,7 @@ export class FastMCP extends (EventEmitter as {
 
         const log = {
           debug: (message: string, context?: SerializableValue) => {
-            server.sendLoggingMessage({
+            this.#server.sendLoggingMessage({
               level: "debug",
               data: {
                 message,
@@ -376,7 +380,7 @@ export class FastMCP extends (EventEmitter as {
             });
           },
           error: (message: string, context?: SerializableValue) => {
-            server.sendLoggingMessage({
+            this.#server.sendLoggingMessage({
               level: "error",
               data: {
                 message,
@@ -385,7 +389,7 @@ export class FastMCP extends (EventEmitter as {
             });
           },
           info: (message: string, context?: SerializableValue) => {
-            server.sendLoggingMessage({
+            this.#server.sendLoggingMessage({
               level: "info",
               data: {
                 message,
@@ -394,7 +398,7 @@ export class FastMCP extends (EventEmitter as {
             });
           },
           warn: (message: string, context?: SerializableValue) => {
-            server.sendLoggingMessage({
+            this.#server.sendLoggingMessage({
               level: "warning",
               data: {
                 message,
@@ -438,10 +442,10 @@ export class FastMCP extends (EventEmitter as {
     });
   }
 
-  private setupResourceHandlers(server: Server) {
-    server.setRequestHandler(ListResourcesRequestSchema, async () => {
+  private setupResourceHandlers(resources: Resource[]) {
+    this.#server.setRequestHandler(ListResourcesRequestSchema, async () => {
       return {
-        resources: this.#resources.map((resource) => {
+        resources: resources.map((resource) => {
           return {
             uri: resource.uri,
             name: resource.name,
@@ -451,48 +455,51 @@ export class FastMCP extends (EventEmitter as {
       };
     });
 
-    server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
-      const resource = this.#resources.find(
-        (resource) => resource.uri === request.params.uri,
-      );
-
-      if (!resource) {
-        throw new McpError(
-          ErrorCode.MethodNotFound,
-          `Unknown resource: ${request.params.uri}`,
+    this.#server.setRequestHandler(
+      ReadResourceRequestSchema,
+      async (request) => {
+        const resource = resources.find(
+          (resource) => resource.uri === request.params.uri,
         );
-      }
 
-      let result: Awaited<ReturnType<Resource["load"]>>;
+        if (!resource) {
+          throw new McpError(
+            ErrorCode.MethodNotFound,
+            `Unknown resource: ${request.params.uri}`,
+          );
+        }
 
-      try {
-        result = await resource.load();
-      } catch (error) {
-        throw new McpError(
-          ErrorCode.InternalError,
-          `Error reading resource: ${error}`,
-          {
-            uri: resource.uri,
-          },
-        );
-      }
+        let result: Awaited<ReturnType<Resource["load"]>>;
 
-      return {
-        contents: [
-          {
-            uri: resource.uri,
-            mimeType: resource.mimeType,
-            ...result,
-          },
-        ],
-      };
-    });
+        try {
+          result = await resource.load();
+        } catch (error) {
+          throw new McpError(
+            ErrorCode.InternalError,
+            `Error reading resource: ${error}`,
+            {
+              uri: resource.uri,
+            },
+          );
+        }
+
+        return {
+          contents: [
+            {
+              uri: resource.uri,
+              mimeType: resource.mimeType,
+              ...result,
+            },
+          ],
+        };
+      },
+    );
   }
 
-  private setupPromptHandlers(server: Server) {
-    server.setRequestHandler(ListPromptsRequestSchema, async () => {
+  private setupPromptHandlers(prompts: Prompt[]) {
+    this.#server.setRequestHandler(ListPromptsRequestSchema, async () => {
       return {
-        prompts: this.#prompts.map((prompt) => {
+        prompts: prompts.map((prompt) => {
           return {
             name: prompt.name,
             description: prompt.description,
@@ -502,8 +509,8 @@ export class FastMCP extends (EventEmitter as {
       };
     });
 
-    server.setRequestHandler(GetPromptRequestSchema, async (request) => {
-      const prompt = this.#prompts.find(
+    this.#server.setRequestHandler(GetPromptRequestSchema, async (request) => {
+      const prompt = prompts.find(
         (prompt) => prompt.name === request.params.name,
       );
 
@@ -549,6 +556,27 @@ export class FastMCP extends (EventEmitter as {
       };
     });
   }
+}
+
+export class FastMCP extends (EventEmitter as {
+  new (): StrictEventEmitter<EventEmitter, FastMCPEvents>;
+}) {
+  #options: ServerOptions;
+  #prompts: Prompt[] = [];
+  #resources: Resource[] = [];
+  #sessions: FastMCPSession[] = [];
+  #sseServer: SSEServer | null = null;
+  #tools: Tool[] = [];
+
+  constructor(public options: ServerOptions) {
+    super();
+
+    this.#options = options;
+  }
+
+  public get sessions(): FastMCPSession[] {
+    return this.#sessions;
+  }
 
   /**
    * Adds a tool to the server.
@@ -584,41 +612,23 @@ export class FastMCP extends (EventEmitter as {
       transportType: "stdio",
     },
   ) {
-    const capabilities: ServerCapabilities = {};
-
-    if (this.#tools.length) {
-      capabilities.tools = {};
-    }
-
-    if (this.#resources.length) {
-      capabilities.resources = {};
-    }
-
-    if (this.#prompts.length) {
-      capabilities.prompts = {};
-    }
-
-    capabilities.logging = {};
-
     if (options.transportType === "stdio") {
       const transport = new StdioServerTransport();
 
-      const server = new Server(
-        { name: this.#options.name, version: this.#options.version },
-        { capabilities },
-      );
-
-      this.setupHandlers(server);
-
-      await server.connect(transport);
-
-      this.#clients.push({
-        type: "stdio",
-        server,
+      const session = new FastMCPSession({
+        name: this.#options.name,
+        version: this.#options.version,
+        tools: this.#tools,
+        resources: this.#resources,
+        prompts: this.#prompts,
       });
 
+      await session.connect(transport);
+
+      this.#sessions.push(session);
+
       this.emit("connect", {
-        server,
+        session,
       });
 
       console.error(`server is running on stdio`);
@@ -627,37 +637,56 @@ export class FastMCP extends (EventEmitter as {
         endpoint: options.sse.endpoint as `/${string}`,
         port: options.sse.port,
         createServer: async () => {
-          const server = new Server(
-            { name: this.#options.name, version: this.#options.version },
-            { capabilities },
-          );
+          const session = new FastMCPSession({
+            name: this.#options.name,
+            version: this.#options.version,
+            tools: this.#tools,
+            resources: this.#resources,
+            prompts: this.#prompts,
+          });
 
-          this.setupHandlers(server);
+          this.#sessions.push(session);
 
-          return server;
+          return session.server;
         },
         onClose: (server) => {
-          this.#clients = this.#clients.filter(
-            (client) => client.server !== server,
+          const session = this.#sessions.find(
+            (session) => session.server === server,
+          );
+
+          if (!session) {
+            throw new UnexpectedStateError("Server not found");
+          }
+
+          this.#sessions = this.#sessions.filter(
+            (maybeOurSession) => maybeOurSession !== session,
           );
 
           this.emit("disconnect", {
-            server,
+            session,
           });
         },
         onConnect: async (server) => {
-          this.#clients.push({
-            type: "sse",
-            server: server,
-          });
+          const session = this.#sessions.find(
+            (session) => session.server === server,
+          );
 
-          this.emit("connect", {
-            server: server,
-          });
+          if (!session) {
+            throw new UnexpectedStateError("Server not found");
+          }
+
+          // TODO investigate where is the race condition
+          setTimeout(() => {
+            this.emit("connect", {
+              session,
+            });
+          }, 100);
         },
       });
 
-      console.error(`server is running on SSE at http://localhost:${options.sse.port}${options.sse.endpoint}`);
+      console.error(
+        `server is running on SSE at http://localhost:${options.sse.port}${options.sse.endpoint}`,
+      );
     } else {
       throw new Error("Invalid transport type");
     }

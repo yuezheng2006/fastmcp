@@ -1,6 +1,6 @@
 # FastMCP
 
-A TypeScript framework for building [MCP](https://modelcontextprotocol.io/) servers.
+A TypeScript framework for building [MCP](https://modelcontextprotocol.io/) servers capable of handling client sessions.
 
 > [!NOTE]
 > For a Python implementation, see [FastMCP](https://github.com/jlowin/fastmcp).
@@ -8,6 +8,7 @@ A TypeScript framework for building [MCP](https://modelcontextprotocol.io/) serv
 ## Features
 
 - Simple Tool, Resource, Prompt definition
+- [Sessions](#sessions)
 - [Image content](#returning-an-image)
 - [Logging](#logging)
 - [Error handling](#errors)
@@ -388,28 +389,28 @@ server.addPrompt({
 });
 ```
 
+### Sessions
+
+The `session` object is an instance of `FastMCPSession` and it describes active client sessions.
+
+```ts
+server.sessions;
+```
+
+We allocate a new server instance for each client connection to enable 1:1 communication between a client and the server.
+
 ### Typed events
 
 You can listen to events emitted by the server using the `on` method:
 
 ```ts
 server.on("connect", (event) => {
-  console.log("Client connected:", event.server);
+  console.log("Client connected:", event.session);
 });
 
 server.on("disconnect", (event) => {
-  console.log("Client disconnected:", event.server);
+  console.log("Client disconnected:", event.session);
 });
-```
-
-> [!NOTE]
-> The `server` object is a [MCP Server](https://modelcontextprotocol.io/docs/concepts/server) instance.
-> We allocate a new server instance for each client connection to enable 1:1 communication between a client and the server.
-
-You can also get a list of all connected clients:
-
-```ts
-server.clients;
 ```
 
 ## Running Your Server

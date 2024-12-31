@@ -17,8 +17,8 @@ importers:
         specifier: ^19.6.0
         version: 19.6.0
       mcp-proxy:
-        specifier: ^2.0.0
-        version: 2.0.0
+        specifier: ^2.0.2
+        version: 2.0.2
       strict-event-emitter-types:
         specifier: ^2.0.0
         version: 2.0.0
@@ -2569,10 +2569,10 @@ packages:
       }
     hasBin: true
 
-  mcp-proxy@2.0.0:
+  mcp-proxy@2.0.2:
     resolution:
       {
-        integrity: sha512-dKRRWwbpzhdMYu954ybU/JgJYqFCc13735ghcHu5rlB8IesDk84CNYtlkk1M31yfbyvo6gwaD8VzhzSOtWokKw==,
+        integrity: sha512-OtzPev3N5AY6tBPYiuDydnjoWYKG2dQ10b+PsM7I7fpGJtNBxRX7rSfGkRZBJHm5/1LtxYUnlqE2D37FTgxL6Q==,
       }
     hasBin: true
 
@@ -5410,7 +5410,7 @@ snapshots:
       fastmcp: 1.6.1
       yargs: 17.7.2
 
-  mcp-proxy@2.0.0:
+  mcp-proxy@2.0.2:
     dependencies:
       "@modelcontextprotocol/sdk": 1.0.4
       eventsource: 3.0.2

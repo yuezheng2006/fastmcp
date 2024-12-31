@@ -1,4 +1,4 @@
-import { FastMCP, UserError, imageContent } from "./FastMCP.js";
+import { FastMCP, FastMCPSession, UserError, imageContent } from "./FastMCP.js";
 import { z } from "zod";
 import { test, expect, vi } from "vitest";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
@@ -10,7 +10,6 @@ import {
   LoggingMessageNotificationSchema,
   McpError,
 } from "@modelcontextprotocol/sdk/types.js";
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 
 const runWithTestServer = async ({
   run,
@@ -23,6 +22,7 @@ const runWithTestServer = async ({
   }: {
     client: Client;
     server: FastMCP;
+    session: FastMCPSession;
   }) => Promise<void>;
 }) => {
   const port = await getRandomPort();
@@ -52,9 +52,15 @@ const runWithTestServer = async ({
       new URL(`http://localhost:${port}/sse`),
     );
 
-    await client.connect(transport);
+    const session = await new Promise<FastMCPSession>((resolve) => {
+      server.on("connect", (event) => {
+        resolve(event.session);
+      });
 
-    await run({ client, server });
+      client.connect(transport);
+    });
+
+    await run({ client, server, session });
   } finally {
     await server.stop();
   }
@@ -366,21 +372,19 @@ test("tracks tool progress", async () => {
 test("sets logging levels", async () => {
   await runWithTestServer({
     start: async () => {
-      const server = new FastMCP({
+      return new FastMCP({
         name: "Test",
         version: "1.0.0",
       });
-
-      return server;
     },
-    run: async ({ client, server }) => {
+    run: async ({ client, session }) => {
       await client.setLoggingLevel("debug");
 
-      expect(server.loggingLevel).toBe("debug");
+      expect(session.loggingLevel).toBe("debug");
 
       await client.setLoggingLevel("info");
 
-      expect(server.loggingLevel).toBe("info");
+      expect(session.loggingLevel).toBe("info");
     },
   });
 });
@@ -584,12 +588,7 @@ test("uses events to notify server of client connect/disconnect", async () => {
   expect(onConnect).toHaveBeenCalledTimes(1);
   expect(onDisconnect).toHaveBeenCalledTimes(0);
 
-  expect(server.clients).toEqual([
-    {
-      type: "sse",
-      server: expect.any(Server),
-    },
-  ]);
+  expect(server.sessions).toEqual([expect.any(FastMCPSession)]);
 
   await client.close();
 
@@ -651,15 +650,9 @@ test("handles multiple clients", async () => {
 
   await delay(100);
 
-  expect(server.clients).toEqual([
-    {
-      type: "sse",
-      server: expect.any(Server),
-    },
-    {
-      type: "sse",
-      server: expect.any(Server),
-    },
+  expect(server.sessions).toEqual([
+    expect.any(FastMCPSession),
+    expect.any(FastMCPSession),
   ]);
 
   await server.stop();
