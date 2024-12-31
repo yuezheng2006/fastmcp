@@ -17,8 +17,8 @@ importers:
         specifier: ^19.6.0
         version: 19.6.0
       mcp-proxy:
-        specifier: ^1.1.0
-        version: 1.1.0
+        specifier: ^1.3.0
+        version: 1.3.0
       yargs:
         specifier: ^17.7.2
         version: 17.7.2
@@ -1862,10 +1862,10 @@ packages:
         integrity: sha512-DCXu6Ifhqcks7TZKY3Hxp3y6qphY5SJZmrWMDrKcERSOXWQdMhU9Ig/PYrzyw/ul9jOIyh0N4M0tbC5hodg8dw==,
       }
 
-  fastmcp@1.5.9:
+  fastmcp@1.6.0:
     resolution:
       {
-        integrity: sha512-xFYsVaGGJZNKaUHp2phpba6Pb9MvAmG2eqPHQ3OrRXVAEalF/Mdmq4GajrdbVXIFFp9V4sCBeSJbki1YNeZc7w==,
+        integrity: sha512-kNY+fE+YyjdMMzNSLm8/966dMzh+AfngrEkbbCsme9Vhy6v1Y2MvLpR8qnaUjwqLeP9MymSxlsfXO5b24vbi9w==,
       }
     hasBin: true
 
@@ -2562,10 +2562,10 @@ packages:
     engines: { node: ">= 18" }
     hasBin: true
 
-  mcp-proxy@1.1.0:
+  mcp-proxy@1.3.0:
     resolution:
       {
-        integrity: sha512-m+FVW9tyHx3mT/SOQvrD48Q4mvy/iIjPTaTG6x80ideH/VArjIty9wOjw912bLVO9egS+RbzLQH99NYK8zbrug==,
+        integrity: sha512-m+DUbc17y8Tb9QOS645lFxblJzDZwzmn9RA9VOdjQd0Pf1NqIy4ZQxj9i9m2CsZBdztWtjUOQwTfyMxRcC+zGg==,
       }
     hasBin: true
 
@@ -5019,11 +5019,12 @@ snapshots:
 
   fast-levenshtein@2.0.6: {}
 
-  fastmcp@1.5.9:
+  fastmcp@1.6.0:
     dependencies:
       "@modelcontextprotocol/sdk": 1.0.4
       execa: 9.5.2
       file-type: 19.6.0
+      mcp-proxy: 1.3.0
       yargs: 17.7.2
       zod: 3.24.1
       zod-to-json-schema: 3.24.1(zod@3.24.1)
@@ -5389,10 +5390,11 @@ snapshots:
 
   marked@12.0.2: {}
 
-  mcp-proxy@1.1.0:
+  mcp-proxy@1.3.0:
     dependencies:
       "@modelcontextprotocol/sdk": 1.0.4
-      fastmcp: 1.5.9
+      eventsource: 3.0.2
+      fastmcp: 1.6.0
       yargs: 17.7.2
 
   meow@13.2.0: {}
