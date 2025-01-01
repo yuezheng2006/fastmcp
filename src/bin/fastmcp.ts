@@ -22,7 +22,7 @@ await yargs(hideBin(process.argv))
           stdin: "inherit",
           stdout: "inherit",
           stderr: "inherit",
-        })`npx @wong2/mcp-cli tsx ${argv.file}`;
+        })`npx @wong2/mcp-cli npx tsx ${argv.file}`;
       } catch {
         process.exit(1);
       }
