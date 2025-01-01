@@ -17,6 +17,7 @@ A TypeScript framework for building [MCP](https://modelcontextprotocol.io/) serv
 - [Progress notifications](#progress)
 - [Typed server events](#typed-server-events)
 - [Prompt argument auto-completion](#prompt-argument-auto-completion)
+- [Sampling](#requestsampling)
 - Automated SSE pings
 - Roots
 - CLI for [testing](#test-with-mcp-cli) and [debugging](#inspect-with-mcp-inspector)
@@ -554,6 +555,27 @@ server.on("disconnect", (event) => {
 `FastMCPSession` represents a client session and provides methods to interact with the client.
 
 Refer to [Sessions](#sessions) for examples of how to obtain a `FastMCPSession` instance.
+
+### `requestSampling`
+
+`requestSampling` creates a [sampling](https://modelcontextprotocol.io/docs/concepts/sampling) request and returns the response.
+
+```ts
+await session.requestSampling({
+  messages: [
+    {
+      role: "user",
+      content: {
+        type: "text",
+        text: "What files are in the current directory?",
+      },
+    },
+  ],
+  systemPrompt: "You are a helpful file system assistant.",
+  includeContext: "thisServer",
+  maxTokens: 100,
+});
+```
 
 ### `clientCapabilities`
 

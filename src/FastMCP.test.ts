@@ -6,6 +6,7 @@ import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
 import { getRandomPort } from "get-port-please";
 import { setTimeout as delay } from "timers/promises";
 import {
+  CreateMessageRequestSchema,
   ErrorCode,
   ListRootsRequestSchema,
   LoggingMessageNotificationSchema,
@@ -1206,6 +1207,65 @@ test("clients reads a resource accessed via a resource template", async () => {
       expect(loadSpy).toHaveBeenCalledWith({
         name: "app",
       });
+    },
+  });
+});
+
+test("makes a sampling request", async () => {
+  const onMessageRequest = vi.fn(() => {
+    return {
+      model: "gpt-3.5-turbo",
+      role: "assistant",
+      content: {
+        type: "text",
+        text: "The files are in the current directory.",
+      },
+    };
+  });
+
+  await runWithTestServer({
+    client: async () => {
+      const client = new Client(
+        {
+          name: "example-client",
+          version: "1.0.0",
+        },
+        {
+          capabilities: {
+            sampling: {},
+          },
+        },
+      );
+      return client;
+    },
+    run: async ({ client, session }) => {
+      client.setRequestHandler(CreateMessageRequestSchema, onMessageRequest);
+
+      const response = await session.requestSampling({
+        messages: [
+          {
+            role: "user",
+            content: {
+              type: "text",
+              text: "What files are in the current directory?",
+            },
+          },
+        ],
+        systemPrompt: "You are a helpful file system assistant.",
+        includeContext: "thisServer",
+        maxTokens: 100,
+      });
+
+      expect(response).toEqual({
+        model: "gpt-3.5-turbo",
+        role: "assistant",
+        content: {
+          type: "text",
+          text: "The files are in the current directory.",
+        },
+      });
+
+      expect(onMessageRequest).toHaveBeenCalledTimes(1);
     },
   });
 });

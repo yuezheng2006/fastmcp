@@ -4,6 +4,7 @@ import {
   CallToolRequestSchema,
   ClientCapabilities,
   CompleteRequestSchema,
+  CreateMessageRequestSchema,
   ErrorCode,
   GetPromptRequestSchema,
   ListPromptsRequestSchema,
@@ -515,6 +516,12 @@ export class FastMCPSession extends FastMCPSessionEventEmitter {
   }
 
   #pingInterval: ReturnType<typeof setInterval> | null = null;
+
+  public async requestSampling(
+    message: z.infer<typeof CreateMessageRequestSchema>["params"],
+  ) {
+    return this.#server.createMessage(message);
+  }
 
   public async connect(transport: Transport) {
     if (this.#server.transport) {
