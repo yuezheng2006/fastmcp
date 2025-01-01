@@ -355,6 +355,13 @@ const FastMCPSessionEventEmitterBase: {
 
 class FastMCPSessionEventEmitter extends FastMCPSessionEventEmitterBase {}
 
+type SamplingResponse = {
+  model: string;
+  stopReason?: "endTurn" | "stopSequence" | "maxTokens" | string;
+  role: "user" | "assistant";
+  content: TextContent | ImageContent;
+};
+
 export class FastMCPSession extends FastMCPSessionEventEmitter {
   #capabilities: ServerCapabilities = {};
   #clientCapabilities?: ClientCapabilities;
@@ -519,7 +526,7 @@ export class FastMCPSession extends FastMCPSessionEventEmitter {
 
   public async requestSampling(
     message: z.infer<typeof CreateMessageRequestSchema>["params"],
-  ) {
+  ): Promise<SamplingResponse> {
     return this.#server.createMessage(message);
   }
 
