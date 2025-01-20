@@ -722,8 +722,8 @@ export class FastMCPSession extends FastMCPSessionEventEmitter {
 
         if (!parsed.success) {
           throw new McpError(
-            ErrorCode.InvalidRequest,
-            `Invalid ${request.params.name} arguments`,
+            ErrorCode.InvalidParams,
+            `Invalid ${request.params.name} parameters`,
           );
         }
 
