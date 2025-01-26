@@ -21,7 +21,7 @@
   "module": "dist/FastMCP.js",
   "types": "dist/FastMCP.d.ts",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.1.0",
+    "@modelcontextprotocol/sdk": "^1.4.1",
     "execa": "^9.5.2",
     "file-type": "^19.6.0",
     "fuse.js": "^7.0.0",
