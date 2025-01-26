@@ -1308,7 +1308,7 @@ test("throws ErrorCode.InvalidParams if tool parameters do not match zod schema"
         expect(error.code).toBe(ErrorCode.InvalidParams);
 
         // @ts-expect-error - we know that error is an McpError
-        expect(error.message).toBe("Invalid add parameters");
+        expect(error.message).toBe("MCP error -32602: MCP error -32602: Invalid add parameters");
       }
     },
   });
