@@ -552,7 +552,7 @@ export class FastMCPSession extends FastMCPSessionEventEmitter {
     }
 
     if (!this.#clientCapabilities) {
-      throw new UnexpectedStateError("Server did not connect");
+      console.warn('[warning] FastMCP could not infer client capabilities')
     }
 
     if (this.#clientCapabilities?.roots) {
