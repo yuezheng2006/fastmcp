@@ -14,6 +14,7 @@ A TypeScript framework for building [MCP](https://modelcontextprotocol.io/) serv
 - [Logging](#logging)
 - [Error handling](#errors)
 - [SSE](#sse)
+- CORS (enabled by default)
 - [Progress notifications](#progress)
 - [Typed server events](#typed-server-events)
 - [Prompt argument auto-completion](#prompt-argument-auto-completion)
