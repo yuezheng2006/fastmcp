@@ -1460,3 +1460,24 @@ test("allows new clients to connect after a client disconnects", async () => {
 
   await server.stop();
 });
+
+test("able to close server immediately after starting it", async () => {
+  const port = await getRandomPort();
+
+  const server = new FastMCP({
+    name: "Test",
+    version: "1.0.0",
+  });
+
+  await server.start({
+    transportType: "sse",
+    sse: {
+      endpoint: "/sse",
+      port,
+    },
+  });
+
+  // We were previously not waiting for the server to start.
+  // Therefore, this would have caused error 'Server is not running.'.
+  await server.stop();
+});

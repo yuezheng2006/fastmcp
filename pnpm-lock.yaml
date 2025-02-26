@@ -21,8 +21,8 @@ importers:
         specifier: ^7.1.0
         version: 7.1.0
       mcp-proxy:
-        specifier: ^2.5.0
-        version: 2.5.0
+        specifier: ^2.5.1
+        version: 2.5.1
       strict-event-emitter-types:
         specifier: ^2.0.0
         version: 2.0.0
@@ -1121,8 +1121,8 @@ packages:
   fast-levenshtein@2.0.6:
     resolution: {integrity: sha512-DCXu6Ifhqcks7TZKY3Hxp3y6qphY5SJZmrWMDrKcERSOXWQdMhU9Ig/PYrzyw/ul9jOIyh0N4M0tbC5hodg8dw==}
 
-  fastmcp@1.18.1:
-    resolution: {integrity: sha512-HaCvPdabgAjljl06PVEcK1u9m95s+ZzGEuQUNslV3KjPg8jWpmRYI+EYYHTxYVBM6Ty0hoxrYysFePEbpjYylg==}
+  fastmcp@1.19.1:
+    resolution: {integrity: sha512-oItxfgHnB7QWg2ZC8rj2B7gBic8MJrdX/8bIQpQp6xDA5t99Z1KHyh6fGOm4hvjVNBm5h8NrJStWPcGRuSSVcw==}
     hasBin: true
 
   fastq@1.19.0:
@@ -1574,8 +1574,8 @@ packages:
     resolution: {integrity: sha512-/IXtbwEk5HTPyEwyKX6hGkYXxM9nbj64B+ilVJnC/R6B0pH5G4V3b0pVbL7DBj4tkhBAppbQUlf6F6Xl9LHu1g==}
     engines: {node: '>= 0.4'}
 
-  mcp-proxy@2.5.0:
-    resolution: {integrity: sha512-DVtDeArpI+izY3D0l/UyvO0pP+hkEevtafydnGPWC1ul1S0b1VSAXE+qVwsQ0hFhytUDhDyHBmMyE2o9ph8eIw==}
+  mcp-proxy@2.5.1:
+    resolution: {integrity: sha512-4LPsGHEyr6T+Gz0DQjSpBbm6azInxoDAg8THkhM+VopRo+MM0ooMFv3JQnVaGE8W94S3KQ5KV6JQDPXm2IZMeQ==}
     hasBin: true
 
   media-typer@1.1.0:
@@ -3644,13 +3644,13 @@ snapshots:
 
   fast-levenshtein@2.0.6: {}
 
-  fastmcp@1.18.1:
+  fastmcp@1.19.1:
     dependencies:
       '@modelcontextprotocol/sdk': 1.6.0
       execa: 9.5.2
       file-type: 20.3.0
       fuse.js: 7.1.0
-      mcp-proxy: 2.5.0
+      mcp-proxy: 2.5.1
       strict-event-emitter-types: 2.0.0
       uri-templates: 0.2.0
       yargs: 17.7.2
@@ -4084,11 +4084,11 @@ snapshots:
 
   math-intrinsics@1.1.0: {}
 
-  mcp-proxy@2.5.0:
+  mcp-proxy@2.5.1:
     dependencies:
       '@modelcontextprotocol/sdk': 1.6.0
       eventsource: 3.0.5
-      fastmcp: 1.18.1
+      fastmcp: 1.19.1
       yargs: 17.7.2
     transitivePeerDependencies:
       - supports-color
