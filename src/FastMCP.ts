@@ -1117,7 +1117,7 @@ export class FastMCP extends FastMCPEventEmitter {
         },
       });
 
-      console.error(
+      console.info(
         `server is running on SSE at http://localhost:${options.sse.port}${options.sse.endpoint}`,
       );
     } else {
