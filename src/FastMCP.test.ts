@@ -1313,3 +1313,59 @@ test("throws ErrorCode.InvalidParams if tool parameters do not match zod schema"
     },
   });
 });
+
+test("server remains usable after InvalidParams error", async () => {
+  await runWithTestServer({
+    server: async () => {
+      const server = new FastMCP({
+        name: "Test",
+        version: "1.0.0",
+      });
+
+      server.addTool({
+        name: "add",
+        description: "Add two numbers",
+        parameters: z.object({
+          a: z.number(),
+          b: z.number(),
+        }),
+        execute: async (args) => {
+          return String(args.a + args.b);
+        },
+      });
+
+      return server;
+    },
+    run: async ({ client }) => {
+      try {
+        await client.callTool({
+          name: "add",
+          arguments: {
+            a: 1,
+            b: "invalid",
+          },
+        });
+      } catch (error) {
+        expect(error).toBeInstanceOf(McpError);
+
+        // @ts-expect-error - we know that error is an McpError
+        expect(error.code).toBe(ErrorCode.InvalidParams);
+
+        // @ts-expect-error - we know that error is an McpError
+        expect(error.message).toBe("MCP error -32602: MCP error -32602: Invalid add parameters");
+      }
+
+      expect(
+        await client.callTool({
+          name: "add",
+          arguments: {
+            a: 1,
+            b: 2,
+          },
+        }),
+      ).toEqual({
+        content: [{ type: "text", text: "3" }],
+      });
+    },
+  });
+});
