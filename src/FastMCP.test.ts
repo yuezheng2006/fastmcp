@@ -68,6 +68,7 @@ const runWithTestServer = async ({
 
     const session = await new Promise<FastMCPSession>((resolve) => {
       server.on("connect", (event) => {
+        
         resolve(event.session);
       });
 
@@ -1537,3 +1538,140 @@ test("closing event source does not produce error", async () => {
   await server.stop();
 });
 
+test("provides auth to tools", async () => {
+  const port = await getRandomPort();
+
+  const authenticate = vi.fn(async () => {
+    return {
+      id: 1,
+    };
+  });
+
+  const server = new FastMCP<{id: number}>({
+    name: "Test",
+    version: "1.0.0",
+    authenticate,
+  });
+
+  const execute = vi.fn(async (args) => {
+    return String(args.a + args.b);
+  });
+
+  server.addTool({
+    name: "add",
+    description: "Add two numbers",
+    parameters: z.object({
+      a: z.number(),
+      b: z.number(),
+    }),
+    execute,
+  });
+
+  await server.start({
+    transportType: "sse",
+    sse: {
+      endpoint: "/sse",
+      port,
+    },
+  });
+
+  const client = new Client(
+    {
+      name: "example-client",
+      version: "1.0.0",
+    },
+    {
+      capabilities: {},
+    },
+  );
+
+  const transport = new SSEClientTransport(
+    new URL(`http://localhost:${port}/sse`),
+    {
+      eventSourceInit: {
+        fetch: async (url, init) => {
+          return fetch(url, {
+            ...init,
+            headers: {
+              ...init?.headers,
+              "x-api-key": "123",
+            },
+          });
+        },
+      },
+    },
+  );
+
+  await client.connect(transport);
+
+  expect(authenticate, "authenticate should have been called").toHaveBeenCalledTimes(1);
+
+  expect(
+    await client.callTool({
+      name: "add",
+      arguments: {
+        a: 1,
+        b: 2,
+      },
+    }),
+  ).toEqual({
+    content: [{ type: "text", text: "3" }],
+  });
+
+  expect(execute, "execute should have been called").toHaveBeenCalledTimes(1);
+
+  expect(execute).toHaveBeenCalledWith({
+    a: 1,
+    b: 2,
+  }, {
+    log: {
+      debug: expect.any(Function),
+      error: expect.any(Function),
+      info: expect.any(Function),
+      warn: expect.any(Function),
+    },
+    reportProgress: expect.any(Function),
+    auth: { id: 1 },
+  });
+});
+
+test("blocks unauthorized requests", async () => {
+  const port = await getRandomPort();
+
+  const server = new FastMCP<{id: number}>({
+    name: "Test",
+    version: "1.0.0",
+    authenticate: async () => {
+      throw new Response(null, {
+        status: 401,
+        statusText: "Unauthorized",
+      });
+    },
+  });
+
+  await server.start({
+    transportType: "sse",
+    sse: {
+      endpoint: "/sse",
+      port,
+    },
+  });
+
+  const client = new Client(
+    {
+      name: "example-client",
+      version: "1.0.0",
+    },
+    {
+      capabilities: {},
+    },
+  );
+
+  const transport = new SSEClientTransport(
+    new URL(`http://localhost:${port}/sse`),
+  );
+
+  expect(async () => {
+    await client.connect(transport);
+  }).rejects.toThrow("SSE error: Non-200 status code (401)");
+});

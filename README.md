@@ -9,6 +9,7 @@ A TypeScript framework for building [MCP](https://modelcontextprotocol.io/) serv
 ## Features
 
 - Simple Tool, Resource, Prompt definition
+- [Authentication](#authentication)
 - [Sessions](#sessions)
 - [Image content](#returning-an-image)
 - [Logging](#logging)
@@ -524,6 +525,45 @@ server.addPrompt({
       enum: ["Germany", "France", "Italy"],
     },
   ],
+});
+```
+
+### Authentication
+
+FastMCP allows you to `authenticate` clients using a custom function:
+
+```ts
+import { AuthError } from "fastmcp";
+
+const server = new FastMCP({
+  name: "My Server",
+  version: "1.0.0",
+  authenticate: ({request}) => {
+    const apiKey = request.headers["x-api-key"];
+
+    if (apiKey !== '123') {
+      throw new Response(null, {
+        status: 401,
+        statusText: "Unauthorized",
+      });
+    }
+
+    // Whatever you return here will be accessible in the `context.auth` object.
+    return {
+      id: 1,
+    }
+  },
+});
+```
+
+Now you can access the authenticated user's data in your tools:
+
+```ts
+server.addTool({
+  name: "sayHello",
+  execute: async (args, { auth }) => {
+    return `Hello, ${auth.id}!`;
+  },
 });
 ```
 

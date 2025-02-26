@@ -29,14 +29,15 @@ import Fuse from "fuse.js";
 import { startSSEServer } from "mcp-proxy";
 import { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import parseURITemplate from "uri-templates";
+import http from "http";
 
 export type SSEServer = {
   close: () => Promise<void>;
 };
 
-type FastMCPEvents = {
-  connect: (event: { session: FastMCPSession }) => void;
-  disconnect: (event: { session: FastMCPSession }) => void;
+type FastMCPEvents<T extends FastMCPSessionAuth> = {
+  connect: (event: { session: FastMCPSession<T> }) => void;
+  disconnect: (event: { session: FastMCPSession<T> }) => void;
 };
 
 type FastMCPSessionEvents = {
@@ -127,7 +128,8 @@ type Progress = {
   total?: number;
 };
 
-type Context = {
+type Context<T extends FastMCPSessionAuth> = {
+  auth: T | undefined;
   reportProgress: (progress: Progress) => Promise<void>;
   log: {
     debug: (message: string, data?: SerializableValue) => void;
@@ -215,13 +217,13 @@ const CompletionZodSchema = z.object({
   hasMore: z.optional(z.boolean()),
 }) satisfies z.ZodType<Completion>;
 
-type Tool<Params extends ToolParameters = ToolParameters> = {
+type Tool<T extends FastMCPSessionAuth, Params extends ToolParameters = ToolParameters> = {
   name: string;
   description?: string;
   parameters?: Params;
   execute: (
     args: z.infer<Params>,
-    context: Context,
+    context: Context<T>,
   ) => Promise<string | ContentResult | TextContent | ImageContent>;
 };
 
@@ -334,9 +336,10 @@ type Prompt<
   name: string;
 };
 
-type ServerOptions = {
+type ServerOptions<T extends FastMCPSessionAuth> = {
   name: string;
   version: `${number}.${number}.${number}`;
+  authenticate?: Authenticate<T>;
 };
 
 type LoggingLevel =
@@ -362,7 +365,9 @@ type SamplingResponse = {
   content: TextContent | ImageContent;
 };
 
-export class FastMCPSession extends FastMCPSessionEventEmitter {
+type FastMCPSessionAuth = Record<string, unknown> | undefined;
+
+export class FastMCPSession<T extends FastMCPSessionAuth = FastMCPSessionAuth> extends FastMCPSessionEventEmitter {
   #capabilities: ServerCapabilities = {};
   #clientCapabilities?: ClientCapabilities;
   #loggingLevel: LoggingLevel = "info";
@@ -371,8 +376,10 @@ export class FastMCPSession extends FastMCPSessionEventEmitter {
   #resourceTemplates: ResourceTemplate[] = [];
   #roots: Root[] = [];
   #server: Server;
+  #auth: T | undefined;
 
   constructor({
+    auth,
     name,
     version,
     tools,
@@ -380,14 +387,17 @@ export class FastMCPSession extends FastMCPSessionEventEmitter {
     resourcesTemplates,
     prompts,
   }: {
+    auth?: T;
     name: string;
     version: string;
-    tools: Tool[];
+    tools: Tool<T>[];
     resources: Resource[];
     resourcesTemplates: InputResourceTemplate[];
     prompts: Prompt[];
   }) {
     super();
+
+    this.#auth = auth;
 
     if (tools.length) {
       this.#capabilities.tools = {};
@@ -690,7 +700,7 @@ export class FastMCPSession extends FastMCPSessionEventEmitter {
     });
   }
 
-  private setupToolHandlers(tools: Tool[]) {
+  private setupToolHandlers(tools: Tool<T>[]) {
     this.#server.setRequestHandler(ListToolsRequestSchema, async () => {
       return {
         tools: tools.map((tool) => {
@@ -787,6 +797,7 @@ export class FastMCPSession extends FastMCPSessionEventEmitter {
         const maybeStringResult = await tool.execute(args, {
           reportProgress,
           log,
+          auth: this.#auth,
         });
 
         if (typeof maybeStringResult === "string") {
@@ -1000,35 +1011,39 @@ export class FastMCPSession extends FastMCPSessionEventEmitter {
 }
 
 const FastMCPEventEmitterBase: {
-  new (): StrictEventEmitter<EventEmitter, FastMCPEvents>;
+  new (): StrictEventEmitter<EventEmitter, FastMCPEvents<FastMCPSessionAuth>>;
 } = EventEmitter;
 
 class FastMCPEventEmitter extends FastMCPEventEmitterBase {}
 
-export class FastMCP extends FastMCPEventEmitter {
-  #options: ServerOptions;
+type Authenticate<T> = (request: http.IncomingMessage) => Promise<T>;
+
+export class FastMCP<T extends Record<string, unknown> | undefined = undefined> extends FastMCPEventEmitter {
+  #options: ServerOptions<T>;
   #prompts: InputPrompt[] = [];
   #resources: Resource[] = [];
   #resourcesTemplates: InputResourceTemplate[] = [];
-  #sessions: FastMCPSession[] = [];
+  #sessions: FastMCPSession<T>[] = [];
   #sseServer: SSEServer | null = null;
-  #tools: Tool[] = [];
+  #tools: Tool<T>[] = [];
+  #authenticate: Authenticate<T> | undefined;
 
-  constructor(public options: ServerOptions) {
+  constructor(public options: ServerOptions<T>) {
     super();
 
     this.#options = options;
+    this.#authenticate = options.authenticate;
   }
 
-  public get sessions(): FastMCPSession[] {
+  public get sessions(): FastMCPSession<T>[] {
     return this.#sessions;
   }
 
   /**
    * Adds a tool to the server.
    */
-  public addTool<Params extends ToolParameters>(tool: Tool<Params>) {
-    this.#tools.push(tool as unknown as Tool);
+  public addTool<Params extends ToolParameters>(tool: Tool<T, Params>) {
+    this.#tools.push(tool as unknown as Tool<T>);
   }
 
   /**
@@ -1072,7 +1087,7 @@ export class FastMCP extends FastMCPEventEmitter {
     if (options.transportType === "stdio") {
       const transport = new StdioServerTransport();
 
-      const session = new FastMCPSession({
+      const session = new FastMCPSession<T>({
         name: this.#options.name,
         version: this.#options.version,
         tools: this.#tools,
@@ -1090,11 +1105,18 @@ export class FastMCP extends FastMCPEventEmitter {
       });
 
     } else if (options.transportType === "sse") {
-      this.#sseServer = await startSSEServer<FastMCPSession>({
+      this.#sseServer = await startSSEServer<FastMCPSession<T>>({
         endpoint: options.sse.endpoint as `/${string}`,
         port: options.sse.port,
-        createServer: async () => {
-          return new FastMCPSession({
+        createServer: async (request) => {
+          let auth: T | undefined;
+
+          if (this.#authenticate) {
+            auth = await this.#authenticate(request);
+          }
+
+          return new FastMCPSession<T>({
+            auth,
             name: this.#options.name,
             version: this.#options.version,
             tools: this.#tools,
