@@ -591,7 +591,11 @@ export class FastMCPSession<T extends FastMCPSessionAuth = FastMCPSessionAuth> e
       clearInterval(this.#pingInterval);
     }
 
-    await this.#server.close();
+    try {
+      await this.#server.close();
+    } catch (error) {
+      console.error("[MCP Error]", "could not close server", error);
+    }
   }
 
   private setupErrorHandling() {
