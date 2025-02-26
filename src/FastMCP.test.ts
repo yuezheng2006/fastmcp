@@ -1369,3 +1369,94 @@ test("server remains usable after InvalidParams error", async () => {
     },
   });
 });
+
+test("allows new clients to connect after a client disconnects", async () => {
+  const port = await getRandomPort();
+
+  const server = new FastMCP({
+    name: "Test",
+    version: "1.0.0",
+  });
+
+  server.addTool({
+    name: "add",
+    description: "Add two numbers",
+    parameters: z.object({
+      a: z.number(),
+      b: z.number(),
+    }),
+    execute: async (args) => {
+      return String(args.a + args.b);
+    },
+  });
+
+  await server.start({
+    transportType: "sse",
+    sse: {
+      endpoint: "/sse",
+      port,
+    },
+  });
+
+  const client1 = new Client(
+    {
+      name: "example-client",
+      version: "1.0.0",
+    },
+    {
+      capabilities: {},
+    },
+  );
+
+  const transport1 = new SSEClientTransport(
+    new URL(`http://localhost:${port}/sse`),
+  );
+
+  await client1.connect(transport1);
+
+  expect(
+    await client1.callTool({
+      name: "add",
+      arguments: {
+        a: 1,
+        b: 2,
+      },
+    }),
+  ).toEqual({
+    content: [{ type: "text", text: "3" }],
+  });
+
+  await client1.close();
+
+  const client2 = new Client(
+    {
+      name: "example-client",
+      version: "1.0.0",
+    },
+    {
+      capabilities: {},
+    },
+  );
+
+  const transport2 = new SSEClientTransport(
+    new URL(`http://localhost:${port}/sse`),
+  );
+
+  await client2.connect(transport2);
+
+  expect(
+    await client2.callTool({
+      name: "add",
+      arguments: {
+        a: 1,
+        b: 2,
+      },
+    }),
+  ).toEqual({
+    content: [{ type: "text", text: "3" }],
+  });
+
+  await client2.close();
+
+  await server.stop();
+});
