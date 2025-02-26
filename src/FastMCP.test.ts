@@ -14,6 +14,7 @@ import {
   PingRequestSchema,
   Root,
 } from "@modelcontextprotocol/sdk/types.js";
+import { createEventSource, EventSourceClient } from 'eventsource-client';
 
 const runWithTestServer = async ({
   run,
@@ -1481,3 +1482,58 @@ test("able to close server immediately after starting it", async () => {
   // Therefore, this would have caused error 'Server is not running.'.
   await server.stop();
 });
+
+test("closing event source does not produce error", async () => {
+  const port = await getRandomPort();
+
+  const server = new FastMCP({
+    name: "Test",
+    version: "1.0.0",
+  });
+
+  server.addTool({
+    name: "add",
+    description: "Add two numbers",
+    parameters: z.object({
+      a: z.number(),
+      b: z.number(),
+    }),
+    execute: async (args) => {
+      return String(args.a + args.b);
+    },
+  });
+
+  await server.start({
+    transportType: "sse",
+    sse: {
+      endpoint: "/sse",
+      port,
+    },
+  });
+
+  const eventSource = await new Promise<EventSourceClient>((onMessage) => {
+    const eventSource = createEventSource({
+      onConnect: () => {
+        console.info('connected');
+      },
+      onDisconnect: () => {
+        console.info('disconnected');
+      },
+      onMessage: () => {
+        onMessage(eventSource);
+      },
+      url: `http://127.0.0.1:${port}/sse`,
+    });
+  });
+
+  expect(eventSource.readyState).toBe('open');
+
+  eventSource.close();
+
+  // We were getting unhandled error 'Not connected'
+  // https://github.com/punkpeye/mcp-proxy/commit/62cf27d5e3dfcbc353e8d03c7714a62c37177b52
+  await delay(1000);
+
+  await server.stop();
+});
+
