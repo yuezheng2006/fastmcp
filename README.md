@@ -548,7 +548,7 @@ const server = new FastMCP({
       });
     }
 
-    // Whatever you return here will be accessible in the `context.auth` object.
+    // Whatever you return here will be accessible in the `context.session` object.
     return {
       id: 1,
     }
@@ -556,13 +556,13 @@ const server = new FastMCP({
 });
 ```
 
-Now you can access the authenticated user's data in your tools:
+Now you can access the authenticated session data in your tools:
 
 ```ts
 server.addTool({
   name: "sayHello",
-  execute: async (args, { auth }) => {
-    return `Hello, ${auth.id}!`;
+  execute: async (args, { session }) => {
+    return `Hello, ${session.id}!`;
   },
 });
 ```

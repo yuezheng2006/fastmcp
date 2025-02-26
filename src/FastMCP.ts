@@ -129,7 +129,7 @@ type Progress = {
 };
 
 type Context<T extends FastMCPSessionAuth> = {
-  auth: T | undefined;
+  session: T | undefined;
   reportProgress: (progress: Progress) => Promise<void>;
   log: {
     debug: (message: string, data?: SerializableValue) => void;
@@ -797,7 +797,7 @@ export class FastMCPSession<T extends FastMCPSessionAuth = FastMCPSessionAuth> e
         const maybeStringResult = await tool.execute(args, {
           reportProgress,
           log,
-          auth: this.#auth,
+          session: this.#auth,
         });
 
         if (typeof maybeStringResult === "string") {

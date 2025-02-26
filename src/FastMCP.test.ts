@@ -1631,7 +1631,7 @@ test("provides auth to tools", async () => {
       warn: expect.any(Function),
     },
     reportProgress: expect.any(Function),
-    auth: { id: 1 },
+    session: { id: 1 },
   });
 });
 
