@@ -1,6 +1,6 @@
 # FastMCP
 
-A TypeScript framework for building [MCP](https://modelcontextprotocol.io/) servers capable of handling client sessions.
+A TypeScript framework for building [MCP](https://glama.ai/mcp) servers capable of handling client sessions.
 
 > [!NOTE]
 >
