@@ -21,8 +21,8 @@ importers:
         specifier: ^7.1.0
         version: 7.1.0
       mcp-proxy:
-        specifier: ^2.10.2
-        version: 2.10.2
+        specifier: ^2.10.3
+        version: 2.10.3
       strict-event-emitter-types:
         specifier: ^2.0.0
         version: 2.0.0
@@ -1131,10 +1131,6 @@ packages:
   fast-levenshtein@2.0.6:
     resolution: {integrity: sha512-DCXu6Ifhqcks7TZKY3Hxp3y6qphY5SJZmrWMDrKcERSOXWQdMhU9Ig/PYrzyw/ul9jOIyh0N4M0tbC5hodg8dw==}
 
-  fastmcp@1.20.2:
-    resolution: {integrity: sha512-4BsEM8iLw2SHRAfV0Res4CEDQCrdaOzPp+nh3bDQ6DJ3AB2ct7XHREZ2JQxjB3D9LqtFy+PZD4ABWKbkom7PIg==}
-    hasBin: true
-
   fastq@1.19.0:
     resolution: {integrity: sha512-7SFSRCNjBQIZH/xZR3iy5iQYR8aGBE0h3VG6/cwlbrpdciNYBMotQav8c1XI3HjHH+NikUpP53nPdlZSdWmFzA==}
 
@@ -1584,8 +1580,8 @@ packages:
     resolution: {integrity: sha512-/IXtbwEk5HTPyEwyKX6hGkYXxM9nbj64B+ilVJnC/R6B0pH5G4V3b0pVbL7DBj4tkhBAppbQUlf6F6Xl9LHu1g==}
     engines: {node: '>= 0.4'}
 
-  mcp-proxy@2.10.2:
-    resolution: {integrity: sha512-U2Ga/z+fVBmcBuYYIoMuvpzdVX6I9FSkungIf2v5MeCI6eaa0X0g/G+JouvGaxvrTye0OiyjPD9r9dTDT2AzMQ==}
+  mcp-proxy@2.10.3:
+    resolution: {integrity: sha512-c1lDtr7jgvDbS2nPT5QKYD/OChxpLQRjxYgyUgq7Y3apV5VTxkanZDjKdV0uwPapPigf9UsYyS2C4IeTm3dZEg==}
     hasBin: true
 
   media-typer@1.1.0:
@@ -3662,21 +3658,6 @@ snapshots:
 
   fast-levenshtein@2.0.6: {}
 
-  fastmcp@1.20.2:
-    dependencies:
-      '@modelcontextprotocol/sdk': 1.6.0
-      execa: 9.5.2
-      file-type: 20.3.0
-      fuse.js: 7.1.0
-      mcp-proxy: 2.10.2
-      strict-event-emitter-types: 2.0.0
-      uri-templates: 0.2.0
-      yargs: 17.7.2
-      zod: 3.24.2
-      zod-to-json-schema: 3.24.3(zod@3.24.2)
-    transitivePeerDependencies:
-      - supports-color
-
   fastq@1.19.0:
     dependencies:
       reusify: 1.0.4
@@ -4102,11 +4083,10 @@ snapshots:
 
   math-intrinsics@1.1.0: {}
 
-  mcp-proxy@2.10.2:
+  mcp-proxy@2.10.3:
     dependencies:
       '@modelcontextprotocol/sdk': 1.6.0
       eventsource: 3.0.5
-      fastmcp: 1.20.2
       yargs: 17.7.2
     transitivePeerDependencies:
       - supports-color
