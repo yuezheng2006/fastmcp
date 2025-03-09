@@ -30,6 +30,9 @@ import { startSSEServer } from "mcp-proxy";
 import { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import parseURITemplate from "uri-templates";
 import http from "http";
+import {
+  fetch
+} from "undici";
 
 export type SSEServer = {
   close: () => Promise<void>;
