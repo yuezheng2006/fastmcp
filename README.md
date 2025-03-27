@@ -721,7 +721,7 @@ Follow the guide https://modelcontextprotocol.io/quickstart/user and add the fol
 - [apinetwork/piapi-mcp-server](https://github.com/apinetwork/piapi-mcp-server) - generate media using Midjourney/Flux/Kling/LumaLabs/Udio/Chrip/Trellis
 - [domdomegg/computer-use-mcp](https://github.com/domdomegg/computer-use-mcp) - controls your computer
 - [LiterallyBlah/Dradis-MCP](https://github.com/LiterallyBlah/Dradis-MCP) – manages projects and vulnerabilities in Dradis
-- [Meeting-Baas/meeting-mcp](https://github.com/Meeting-Baas/meeting-mcp) - enables AI assistants to create meeting bots, search transcripts, and manage recording data
+- [Meeting-Baas/meeting-mcp](https://github.com/Meeting-Baas/meeting-mcp) - create meeting bots, search transcripts, and manage recording data
 
 ## Acknowledgements
 
