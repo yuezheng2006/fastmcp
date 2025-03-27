@@ -32,6 +32,10 @@ npm install fastmcp
 
 ## Quickstart
 
+> [!NOTE]
+>
+> There are many real-world examples of using FastMCP in the wild. See the [Showcase](#showcase) for examples.
+
 ```ts
 import { FastMCP } from "fastmcp";
 import { z } from "zod";
@@ -691,8 +695,10 @@ npx fastmcp inspect server.ts
 >
 > If you've developed a server using FastMCP, please [submit a PR](https://github.com/punkpeye/fastmcp) to showcase it here!
 
-- https://github.com/apinetwork/piapi-mcp-server
-- https://github.com/Meeting-Baas/meeting-mcp - Meeting BaaS MCP server that enables AI assistants to create meeting bots, search transcripts, and manage recording data
+- [apinetwork/piapi-mcp-server](https://github.com/apinetwork/piapi-mcp-server) - generate media using Midjourney/Flux/Kling/LumaLabs/Udio/Chrip/Trellis
+- [domdomegg/computer-use-mcp](https://github.com/domdomegg/computer-use-mcp) - controls your computer
+- [LiterallyBlah/Dradis-MCP](https://github.com/LiterallyBlah/Dradis-MCP) – manages projects and vulnerabilities in Dradis
+- [Meeting-Baas/meeting-mcp](https://github.com/Meeting-Baas/meeting-mcp) - enables AI assistants to create meeting bots, search transcripts, and manage recording data
 
 ## Acknowledgements
 
