@@ -689,6 +689,29 @@ Another way is to use the official [`MCP Inspector`](https://modelcontextprotoco
 npx fastmcp inspect server.ts
 ```
 
+## FAQ
+
+### How to use with Claude Desktop?
+
+Follow the guide https://modelcontextprotocol.io/quickstart/user and add the following configuration:
+
+```json
+{
+  "mcpServers": {
+    "my-mcp-server": {
+      "command": "npx",
+      "args": [
+        "tsx",
+        "/PATH/TO/YOUR_PROJECT/src/index.ts"
+      ],
+      "env": {
+        "YOUR_ENV_VAR": "value"
+      }
+    }
+  }
+}
+```
+
 ## Showcase
 
 > [!NOTE]
