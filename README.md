@@ -38,7 +38,7 @@ npm install fastmcp
 
 ```ts
 import { FastMCP } from "fastmcp";
-import { z } from "zod";
+import { z } from "zod"; // Or any validation library that supports Standard Schema
 
 const server = new FastMCP({
   name: "My Server",
@@ -120,12 +120,54 @@ await client.connect(transport);
 
 [Tools](https://modelcontextprotocol.io/docs/concepts/tools) in MCP allow servers to expose executable functions that can be invoked by clients and used by LLMs to perform actions.
 
-```js
+FastMCP uses the [Standard Schema](https://standardschema.dev) specification for defining tool parameters. This allows you to use your preferred schema validation library (like Zod, ArkType, or Valibot) as long as it implements the spec.
+
+**Zod Example:**
+
+```typescript
+import { z } from "zod";
+
 server.addTool({
-  name: "fetch",
-  description: "Fetch the content of a url",
+  name: "fetch-zod",
+  description: "Fetch the content of a url (using Zod)",
   parameters: z.object({
     url: z.string(),
+  }),
+  execute: async (args) => {
+    return await fetchWebpageContent(args.url);
+  },
+});
+```
+
+**ArkType Example:**
+
+```typescript
+import { type } from "arktype";
+
+server.addTool({
+  name: "fetch-arktype",
+  description: "Fetch the content of a url (using ArkType)",
+  parameters: type({
+    url: "string",
+  }),
+  execute: async (args) => {
+    return await fetchWebpageContent(args.url);
+  },
+});
+```
+
+**Valibot Example:**
+
+Valibot requires the peer dependency @valibot/to-json-schema.
+
+```typescript
+import * as v from "valibot";
+
+server.addTool({
+  name: "fetch-valibot",
+  description: "Fetch the content of a url (using Valibot)",
+  parameters: v.object({
+    url: v.string(),
   }),
   execute: async (args) => {
     return await fetchWebpageContent(args.url);
