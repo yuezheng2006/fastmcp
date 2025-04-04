@@ -80,6 +80,8 @@ npx fastmcp inspect src/examples/addition.ts
 
 ### SSE
 
+[Server-Sent Events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events) (SSE) provide a mechanism for servers to send real-time updates to clients over an HTTPS connection. In the context of MCP, SSE is primarily used to enable remote MCP communication, allowing an MCP hosted on a remote machine to be accessed and relay updates over the network.
+
 You can also run the server with SSE support:
 
 ```ts
