@@ -1,0 +1,109 @@
+---
+description: Apply these rules when creating the project
+globs:
+alwaysApply: true
+---
+## Project Overview
+
+* **Type:** Backend Server Framework
+* **Description:** FastMCP is a TypeScript framework designed to simplify the creation of Model Context Protocol (MCP) servers for facilitating communication between client applications and Large Language Models (LLMs). It manages authentication, session handling, real-time updates (via SSE), logging, error management, and includes CLI tools for testing and debugging.
+* **Primary Goal:** To provide an easy-to-use, robust, and secure MCP server that leverages real-time communication, advanced schema validation (primarily via Zod), and integrated CLI tools to support diverse use cases in LLM interactions.
+
+## Project Structure
+
+### Framework-Specific Routing
+
+* **Directory Rules:**
+
+    * **FastMCP v1.0:** Core server files are organized under `src/` with dedicated subdirectories for tools, resources, sessions, and CLI commands.
+    * Example 1: `src/server/index.ts` serves as the entry point for server initialization and configuration.
+    * Example 2: `src/cli/index.ts` contains the CLI tools such as `fastmcp dev` (for testing) and `fastmcp inspect` (for the web UI).
+    * Note: Although traditional web routing conventions (e.g., Next.js or React Router) are provided in other templates, FastMCP’s structure is oriented toward a custom server + CLI layout.
+
+### Core Directories
+
+* **Versioned Structure:**
+
+    * **`src/server`:** Contains the core MCP server implementation including SSE handlers, session management, authentication logic, and API endpoints.
+    * **`src/cli`:** Hosts CLI tools for testing, debugging, and inspection, ensuring easy local development and troubleshooting.
+    * **`src/config`:** For configuration files and environment-specific settings.
+    * Example 1: `src/server` → "FastMCP server logic with SSE and session handling."
+    * Example 2: `src/cli` → "CLI tool implementations for rapid development and inspection testing."
+
+### Key Files
+
+* **Stack-Versioned Patterns:**
+
+    * **`src/server/index.ts`:** The main entry point initializing the FastMCP server, configuring tools, resources, and prompts based on provided authentication and version settings.
+    * **`src/cli/index.ts`:** The CLI tool entry point orchestrating commands like `fastmcp dev` and `fastmcp inspect`.
+
+## Tech Stack Rules
+
+* **Version Enforcement:**
+
+    * **node@>=16:** Ensure support for ES modules, latest async functions, and overall compatibility with modern Node.js features.
+    * **typescript@>=4.9:** Enforce strict type checking, use of modern TypeScript features, and comprehensive type definitions, especially for schema validation using Zod.
+
+## PRD Compliance
+
+* **Non-Negotiable:**
+
+    * "Ease of use, robust error management, reliable session handling, secure authentication, and real-time SSE communication are mandatory requirements." 
+    * Schema validation via Zod is required, with optional support for Valibot or ArkType for generating JSON schema.
+    * CLI tools for testing and web UI for inspection must be included without compromise.
+
+## App Flow Integration
+
+* **Stack-Aligned Flow:**
+
+    * FastMCP Server Initialization → `src/server/index.ts` initializes the server with the project name, version, and a custom authentication function.
+    * Configuration phase where tools, resources, and prompts are registered using methods such as `addTool`, `addResource`, and `addPrompt`.
+    * Server start-up using either standard IO or SSE transport with each client connection leading to session creation and triggering authentication.
+    * Real-time updates for progress and logs managed via SSE, with proper connection handling (pings, onConnect, and onClose events).
+
+## Best Practices
+
+* **TypeScript**
+
+    * Enable strict compiler options and comprehensive type definitions.
+    * Modularize the codebase to maintain clear separation of concerns (server, CLI, configuration).
+    * Write unit and integration tests to validate schema, authentication, and error handling.
+
+* **Node.js**
+
+    * Utilize async/await for handling asynchronous operations efficiently.
+    * Structure server code to handle real-time SSE updates and client disconnections gracefully.
+    * Maintain robust error handling with try/catch blocks and detailed logging for easier debugging.
+
+* **SSE Communication**
+
+    * Implement automatic pings to ensure clients remain connected.
+    * Validate client authentication before opening SSE streams.
+    * Employ streams and event emitters to efficiently manage real-time data transport.
+
+## Rules
+
+* Derive folder/file patterns **directly** from the specific tech stack documentation and versioning (e.g., FastMCP v1.0 guidelines).
+* If Next.js 14 App Router is in use (not applicable here): Enforce `app/` directory with nested route folders.
+* If Pages Router is used: Use `pages/*.tsx` flat structure.
+* Mirror this logic for frameworks like React Router, SvelteKit, etc., when applicable.
+* Never mix version patterns (e.g., do not combine `pages/` in projects set up with the App Router convention).
+
+## Rules Metrics
+
+Before starting the project development, create a metrics file in the root of the project called `cursor_metrics.md`.
+
+### Instructions:
+
+* Each time a cursor rule is used as context, update `cursor_metrics.md`.
+* Use the following format for `cursor_metrics.md:`
+
+# Rules Metrics
+
+## Usage
+
+The number of times rules is used as context
+
+* rule-name.mdc: 5
+* another-rule.mdc: 2
+* ...other rules
